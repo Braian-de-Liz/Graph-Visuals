@@ -1,0 +1,57 @@
+/* Design tokens do Graph Visuals.
+   Interface: preto com detalhes claros, minimalista.
+   A paleta oficial colore o grafo; na interface aparece só em estados. */
+:root {
+  /* Paleta oficial */
+  --obsidian: #080b12;
+  --stark-blue: #193c64;
+  --vision-gold: #d5b66a;
+  --vision-red: #a83242;
+  --titanium: #858b94;
+  --arc-light: #39bfff;
+
+  /* Base da interface */
+  --bg: #050506;
+  --panel: #09090b;
+  --raised: #0f0f12;
+
+  /* Texto */
+  --text: #ededef;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --text-4: #4b4b53;
+
+  /* Superfícies translúcidas sobre preto */
+  --fill-1: rgba(255, 255, 255, 0.03);
+  --fill-2: rgba(255, 255, 255, 0.055);
+  --fill-3: rgba(255, 255, 255, 0.085);
+
+  /* Camadas flutuantes */
+  --glass: rgba(10, 10, 12, 0.78);
+  --glass-strong: rgba(10, 10, 12, 0.92);
+  --glass-blur: blur(20px) saturate(120%);
+
+  /* Linhas */
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --line-3: rgba(255, 255, 255, 0.2);
+
+  /* Estados */
+  --focus-ring: 0 0 0 1px rgba(255, 255, 255, 0.35), 0 0 0 4px rgba(255, 255, 255, 0.06);
+  --red-soft: rgba(168, 50, 66, 0.16);
+  --ok: #4ade80;
+
+  /* Tipografia */
+  --font: "Inter Variable", "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+
+  /* Forma e movimento */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-float: 0 20px 50px -12px rgba(0, 0, 0, 0.8);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-fast: 120ms;
+  --t: 200ms;
+  --t-slow: 320ms;
+}
