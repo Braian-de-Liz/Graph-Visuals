@@ -3,7 +3,11 @@ import { TopNavigation } from "./components/TopNavigation";
 import { AgentSidebar } from "./components/AgentSidebar";
 import { GraphViewport } from "./components/GraphViewport";
 import { PrimaryAgentWorkspace } from "./components/PrimaryAgentWorkspace";
-import { ProjectExplorer } from "./components/ProjectExplorer";
+import { RightDock } from "./components/RightDock";
+import { DropOverlay } from "./components/DropOverlay";
+import { ContextMenu } from "./components/ContextMenu";
+import { DeleteConfirm } from "./components/FileTree";
+import { sessionsStore } from "./state/sessions";
 import { QuickSpatialFind } from "./components/QuickSpatialFind";
 import { FloatingCodeEditor } from "./components/FloatingCodeEditor";
 import { ApplicationSettings } from "./components/ApplicationSettings";
@@ -13,6 +17,7 @@ import { uiStore } from "./state/ui";
 import { editorStore, showEditor } from "./state/editor";
 import { baseName } from "./lib/paths";
 import { installKeybindings, restoreZoom } from "./lib/keybindings";
+import { restoreLastProject } from "./state/project";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
 const RAIL = 68;
@@ -26,16 +31,22 @@ export default function App() {
   const bottomHeight = uiStore.use((s) => s.bottomHeight);
   const bottomCollapsed = uiStore.use((s) => s.bottomCollapsed);
   const bottomExpanded = uiStore.use((s) => s.bottomExpanded);
+  const rightTopId = sessionsStore.use((s) => s.rightTopId);
+  const rightBottomId = sessionsStore.use((s) => s.rightBottomId);
+  const leftTopId = sessionsStore.use((s) => s.leftTopId);
+  const leftBottomId = sessionsStore.use((s) => s.leftBottomId);
   const centerRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef(0);
 
   useEffect(() => {
     restoreZoom();
+    restoreLastProject();
     return installKeybindings();
   }, []);
 
-  const leftW = left === "hidden" ? 0 : left === "rail" ? RAIL : RAIL + leftWidth;
-  const rightW = rightOpen ? rightWidth : 0;
+  const leftColumn = left === "expanded" || !!leftTopId || !!leftBottomId;
+  const leftW = left === "hidden" ? 0 : leftColumn ? RAIL + leftWidth : RAIL;
+  const rightW = rightOpen || rightTopId || rightBottomId ? rightWidth : 0;
   const bottom = bottomCollapsed ? "40px" : bottomExpanded ? "72%" : `${bottomHeight}px`;
 
   return (
@@ -48,12 +59,12 @@ export default function App() {
       <div className="workspace">
         <div className="side side-left" style={{ width: leftW }}>
           <AgentSidebar />
-          {left === "expanded" && (
+          {left !== "hidden" && leftColumn && (
             <Splitter
               axis="x"
               className="edge-right"
               onStart={() => (dragStart.current = leftWidth)}
-              onDrag={(d) => uiStore.set({ leftWidth: clamp(dragStart.current + d, 280, 720) })}
+              onDrag={(d) => uiStore.set({ leftWidth: clamp(dragStart.current + d, 280, 900) })}
             />
           )}
         </div>
@@ -76,15 +87,15 @@ export default function App() {
         </div>
 
         <div className="side side-right" style={{ width: rightW }}>
-          {rightOpen && (
+          {rightW > 0 && (
             <Splitter
               axis="x"
               className="edge-left"
               onStart={() => (dragStart.current = rightWidth)}
-              onDrag={(d) => uiStore.set({ rightWidth: clamp(dragStart.current - d, 220, 640) })}
+              onDrag={(d) => uiStore.set({ rightWidth: clamp(dragStart.current - d, 220, 900) })}
             />
           )}
-          <ProjectExplorer />
+          <RightDock />
         </div>
 
         <FloatingCodeEditor />
@@ -93,6 +104,9 @@ export default function App() {
       <QuickSpatialFind />
       <ApplicationSettings />
       <KeyboardShortcuts />
+      <DropOverlay />
+      <ContextMenu />
+      <DeleteConfirm />
       <ChordHint />
       <Toast />
     </div>

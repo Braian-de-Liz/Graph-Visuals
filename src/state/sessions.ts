@@ -10,11 +10,24 @@
 // modo que alternar o agente principal nunca reinicia nem encerra processos.
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { createStore } from "../lib/store";
-import { agentsDetect, ptyKill, ptyResize, ptySpawn, ptyWrite, type AgentInfo } from "../lib/ipc";
+import { createStore, type Store } from "../lib/store";
+import { agentResolve, agentsDetect, ptyKill, ptyResize, ptySpawn, ptyWrite, type AgentInfo } from "../lib/ipc";
 import { baseName } from "../lib/paths";
+import { uiStore } from "./ui";
+import { settingsStore } from "./settings";
 
 export type SessionState = "starting" | "running" | "exited" | "error";
+
+/** Onde uma sessão fica visível: painel inferior ou um dos andares das laterais. */
+export type Dock = "primary" | "leftTop" | "leftBottom" | "rightTop" | "rightBottom";
+const DOCK_KEY = {
+  primary: "primaryId",
+  leftTop: "leftTopId",
+  leftBottom: "leftBottomId",
+  rightTop: "rightTopId",
+  rightBottom: "rightBottomId",
+} as const;
+const DOCKS = Object.keys(DOCK_KEY) as Dock[];
 
 export interface SessionMeta {
   id: string;
@@ -36,18 +49,30 @@ interface SessionsState {
   sessions: SessionMeta[];
   /** Sessão exibida no painel central inferior. */
   primaryId: string | null;
+  /** Sessões nos andares superior e inferior das laterais. */
+  leftTopId: string | null;
+  leftBottomId: string | null;
+  rightTopId: string | null;
+  rightBottomId: string | null;
   /** Sessão aberta na lateral (quando não é a principal). */
   viewedId: string | null;
+  /** Formulário "Adicionar agente" aberto no lugar do painel do agente. */
+  addingAgent: boolean;
 }
 
-export const sessionsStore = createStore<SessionsState>({
+const INITIAL: SessionsState = {
   agents: [],
   agentsLoaded: false,
   selectedAgentId: null,
   sessions: [],
   primaryId: null,
+  leftTopId: null,
+  leftBottomId: null,
+  rightTopId: null,
+  rightBottomId: null,
   viewedId: null,
-});
+  addingAgent: false,
+};
 
 interface Runtime {
   term: Terminal;
@@ -57,16 +82,39 @@ interface Runtime {
   alive: boolean;
 }
 
-const runtimes = new Map<string, Runtime>();
-let seq = 0;
+// Estado vivo guardado em globalThis: no desenvolvimento, editar este módulo
+// (HMR) o reexecuta, e sem isso as sessões abertas sumiriam da interface com
+// os processos ainda rodando. Em produção o módulo roda uma única vez.
+const g = globalThis as unknown as {
+  __gvSessions?: {
+    store: Store<SessionsState>;
+    runtimes: Map<string, Runtime>;
+    parking: HTMLDivElement;
+    seq: { n: number };
+  };
+};
+g.__gvSessions ??= {
+  store: createStore<SessionsState>(INITIAL),
+  runtimes: new Map(),
+  parking: (() => {
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;left:-10000px;top:0;width:900px;height:480px;visibility:hidden;pointer-events:none";
+    document.body.appendChild(el);
+    return el;
+  })(),
+  seq: { n: 0 },
+};
+const live = g.__gvSessions;
+
+export const sessionsStore = live.store;
+// Campos novos (versões anteriores do estado, mantido entre recargas).
+sessionsStore.set((s) => ({ ...INITIAL, ...s }));
+
+const runtimes = live.runtimes;
+const seq = live.seq;
 
 /** Contêiner fora da tela onde terminais sem painel visível ficam guardados. */
-const parking = (() => {
-  const el = document.createElement("div");
-  el.style.cssText = "position:fixed;left:-10000px;top:0;width:900px;height:480px;visibility:hidden;pointer-events:none";
-  document.body.appendChild(el);
-  return el;
-})();
+const parking = live.parking;
 
 export const TERMINAL_THEME = {
   background: "#050506",
@@ -94,12 +142,41 @@ export const TERMINAL_THEME = {
 
 export async function detectAgents() {
   try {
-    const agents = await agentsDetect();
-    sessionsStore.set({ agents, agentsLoaded: true });
+    const detected = await agentsDetect();
+    const custom = await Promise.all(
+      settingsStore.get().customAgents.map(async (c): Promise<AgentInfo> => ({
+        id: c.id,
+        name: c.name,
+        command: c.path,
+        kind: "agent",
+        path: await agentResolve(c.path).catch(() => null),
+      })),
+    );
+    sessionsStore.set({ agents: [...detected, ...custom], agentsLoaded: true });
   } catch (e) {
     console.error("agents_detect", e);
     sessionsStore.set({ agentsLoaded: true });
   }
+}
+
+/** Valida o caminho e registra um agente personalizado. Retorna false se o caminho não for executável. */
+export async function addCustomAgent(name: string, path: string): Promise<boolean> {
+  const resolved = await agentResolve(path).catch(() => null);
+  if (!resolved) return false;
+  const { customAgents } = settingsStore.get();
+  const id = `custom-${Date.now().toString(36)}`;
+  settingsStore.set({ customAgents: [...customAgents, { id, name: name.trim() || baseName(resolved), path: path.trim() }] });
+  await detectAgents();
+  sessionsStore.set({ selectedAgentId: id, addingAgent: false });
+  uiStore.set({ left: "expanded" });
+  return true;
+}
+
+/** Remove um agente personalizado. Sessões já abertas continuam com o processo que tinham. */
+export async function removeCustomAgent(id: string) {
+  settingsStore.set({ customAgents: settingsStore.get().customAgents.filter((c) => c.id !== id) });
+  sessionsStore.set((s) => ({ selectedAgentId: s.selectedAgentId === id ? null : s.selectedAgentId }));
+  await detectAgents();
 }
 
 function patchSession(id: string, patch: Partial<SessionMeta>) {
@@ -107,7 +184,7 @@ function patchSession(id: string, patch: Partial<SessionMeta>) {
 }
 
 export function startSession(agent: AgentInfo, cwd: string | null): string {
-  const id = `s${++seq}`;
+  const id = `s${++seq.n}`;
   const project = cwd ? baseName(cwd) : "Sem projeto";
   const ordinal =
     sessionsStore.get().sessions.filter((s) => s.agentId === agent.id && s.cwd === cwd).length + 1;
@@ -228,12 +305,10 @@ export function closeSession(id: string) {
     runtimes.delete(id);
   }
   sessionsStore.set((s) => {
-    const sessions = s.sessions.filter((x) => x.id !== id);
-    return {
-      sessions,
-      primaryId: s.primaryId === id ? null : s.primaryId,
-      viewedId: s.viewedId === id ? null : s.viewedId,
-    };
+    const next: Partial<SessionsState> = { sessions: s.sessions.filter((x) => x.id !== id) };
+    for (const d of DOCKS) if (s[DOCK_KEY[d]] === id) next[DOCK_KEY[d]] = null;
+    if (s.viewedId === id) next.viewedId = null;
+    return next;
   });
 }
 
@@ -244,7 +319,46 @@ export function stopSession(id: string) {
 }
 
 export function setPrimary(id: string | null) {
-  sessionsStore.set((s) => ({ primaryId: id, viewedId: s.viewedId === id ? null : s.viewedId }));
+  placeSession(id, "primary");
+}
+
+/** Posição atual da sessão, ou null se ela não estiver em nenhum painel. */
+export function dockOf(id: string, s = sessionsStore.get()): Dock | null {
+  return DOCKS.find((d) => s[DOCK_KEY[d]] === id) ?? null;
+}
+
+/** Id da sessão numa posição. */
+export const sessionAt = (dock: Dock, s = sessionsStore.get()) => s[DOCK_KEY[dock]];
+
+/**
+ * Coloca a sessão em `dock` (null esvazia a posição). Uma sessão ocupa uma
+ * posição por vez; se o destino estiver ocupado e a sessão vier de outra
+ * posição, as duas trocam de lugar. Nenhum processo é reiniciado.
+ */
+export function placeSession(id: string | null, dock: Dock) {
+  sessionsStore.set((s) => {
+    const next: Partial<SessionsState> = {};
+    const occupant = s[DOCK_KEY[dock]];
+    if (id === null) {
+      next[DOCK_KEY[dock]] = null;
+      return next;
+    }
+    const from = dockOf(id, s);
+    if (from === dock) return {};
+    if (from) next[DOCK_KEY[from]] = occupant && occupant !== id ? occupant : null;
+    next[DOCK_KEY[dock]] = id;
+    if (s.viewedId === id) next.viewedId = null;
+    return next;
+  });
+  if (id && dock === "primary") uiStore.set({ bottomCollapsed: false });
+}
+
+/** Inicia uma sessão e a coloca na posição escolhida (padrão: a última usada). */
+export function launchSession(agent: AgentInfo, cwd: string | null, dock: Dock = settingsStore.get().launchDock): string {
+  const id = startSession(agent, cwd);
+  placeSession(id, dock);
+  setTimeout(() => focusTerminal(id), 150);
+  return id;
 }
 
 // ---------- montagem do DOM do terminal ----------

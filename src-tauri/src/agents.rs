@@ -21,7 +21,9 @@ const AGENTS: &[(&str, &str, &str)] = &[
     ("claude", "Claude Code", "claude"),
     ("opencode", "OpenCode", "opencode"),
     ("codex", "Codex", "codex"),
+    ("copilot", "GitHub Copilot", "copilot"),
     ("kiro", "Kiro CLI", "kiro-cli"),
+    ("antigravity", "Antigravity", "agy"),
 ];
 
 #[cfg(windows)]
@@ -50,4 +52,16 @@ pub fn agents_detect() -> Vec<AgentInfo> {
         .map(make("agent"))
         .chain(SHELLS.iter().map(make("shell")))
         .collect()
+}
+
+/// Resolve o caminho informado pelo usuário para um agente personalizado.
+/// Aceita o caminho completo do executável ou um nome que esteja no PATH.
+/// Retorna o caminho resolvido, ou `None` se não for executável.
+#[tauri::command]
+pub fn agent_resolve(command: String) -> Option<String> {
+    let trimmed = command.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    which::which(trimmed).ok().map(|p| p.to_string_lossy().into_owned())
 }

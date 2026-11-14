@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- C · Monograma G: a letra G desenhada como um caminho no grafo -->
+  <path d="M50 17 L35 8 L18 13 L9 30 L15 47 L32 56 L48 50 L54 36 L38 36"
+        stroke="#858B94" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+  <circle cx="50" cy="17" r="4.2" fill="#D5B66A"/>
+  <circle cx="35" cy="8" r="3" fill="#D5B66A"/>
+  <circle cx="18" cy="13" r="3" fill="#A83242"/>
+  <circle cx="9" cy="30" r="3" fill="#3F6FA6"/>
+  <circle cx="15" cy="47" r="3" fill="#3F6FA6"/>
+  <circle cx="32" cy="56" r="3" fill="#D5B66A"/>
+  <circle cx="48" cy="50" r="3" fill="#A83242"/>
+  <circle cx="54" cy="36" r="3" fill="#D5B66A"/>
+  <circle cx="38" cy="36" r="5" fill="#39BFFF"/>
+</svg>

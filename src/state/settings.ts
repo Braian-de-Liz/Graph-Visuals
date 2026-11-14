@@ -10,21 +10,34 @@ export interface Settings {
   /** Movimento ambiente do grafo (rotação lenta). Mantém a GPU ativa. */
   ambientMotion: boolean;
   recentProjects: string[];
+  /** Onde novas sessões de agente abrem (o usuário escolhe ao iniciar). */
+  launchDock: "primary" | "leftTop" | "leftBottom" | "rightTop" | "rightBottom";
+  /** Agentes adicionados pelo usuário, informando o caminho do executável. */
+  customAgents: CustomAgent[];
+}
+
+export interface CustomAgent {
+  /** Id estável: "custom-<n>". */
+  id: string;
+  name: string;
+  /** Caminho completo do executável ou nome no PATH. */
+  path: string;
 }
 
 const KEY = "gv.settings";
 
 export const DEFAULT_EXCLUDES = [".git", "node_modules", "target", "dist", "build", "out", ".next", "graphify-out"];
 
-export const settingsStore = createStore<Settings>(
-  loadJson<Settings>(KEY, {
-    excludes: DEFAULT_EXCLUDES,
-    showHidden: false,
-    autoGraph: true,
-    ambientMotion: false,
-    recentProjects: [],
-  }),
-);
+export const settingsStore = createStore<Settings>({
+  excludes: DEFAULT_EXCLUDES,
+  showHidden: false,
+  autoGraph: true,
+  ambientMotion: false,
+  recentProjects: [],
+  launchDock: "primary",
+  customAgents: [],
+  ...loadJson<Partial<Settings>>(KEY, {}),
+});
 
 settingsStore.subscribe(() => saveJson(KEY, settingsStore.get()));
 

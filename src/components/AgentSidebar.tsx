@@ -4,28 +4,43 @@ import { StateChip, TerminalHost } from "./AgentSessionView";
 import {
   closeSession,
   detectAgents,
+  dockOf,
+  launchSession,
+  placeSession,
+  removeCustomAgent,
   sessionsStore,
   setPrimary,
-  startSession,
   stopSession,
+  type Dock,
   type SessionMeta,
 } from "../state/sessions";
 import { projectStore } from "../state/project";
+import { settingsStore } from "../state/settings";
+import { DOCK_LABEL, DockPicker, SideDock } from "./RightDock";
+import { beginSessionDrag } from "../state/dnd";
 import { uiStore } from "../state/ui";
+import { AddAgentForm } from "./AddAgentForm";
 import type { AgentInfo } from "../lib/ipc";
 
 /** Lateral esquerda: descobrir, iniciar e alternar sessões dos CLIs originais. */
 export function AgentSidebar() {
   const mode = uiStore.use((s) => s.left);
   const loaded = sessionsStore.use((s) => s.agentsLoaded);
+  const leftTop = sessionsStore.use((s) => s.leftTopId);
+  const leftBottom = sessionsStore.use((s) => s.leftBottomId);
   useEffect(() => {
     if (!loaded) void detectAgents();
   }, [loaded]);
   if (mode === "hidden") return null;
+  const column = mode === "expanded" || !!leftTop || !!leftBottom;
   return (
-    <div className={`agent-sidebar ${mode}`}>
+    <div className={`agent-sidebar ${mode} ${column ? "with-column" : ""}`}>
       <AgentList />
-      {mode === "expanded" && <AgentPanel />}
+      {column && (
+        <div className="left-column">
+          <SideDock side="left" middle={mode === "expanded" ? <AgentPanel /> : null} />
+        </div>
+      )}
     </div>
   );
 }
@@ -43,7 +58,12 @@ function AgentList() {
       uiStore.set({ left: "rail" });
       return;
     }
-    sessionsStore.set({ selectedAgentId: a.id });
+    sessionsStore.set({ selectedAgentId: a.id, addingAgent: false });
+    uiStore.set({ left: "expanded" });
+  };
+
+  const addAgent = () => {
+    sessionsStore.set({ addingAgent: true });
     uiStore.set({ left: "expanded" });
   };
 
@@ -57,7 +77,7 @@ function AgentList() {
         title={`${a.name}${a.path ? "" : " (não encontrado no PATH)"}`}
         onClick={() => pick(a)}
       >
-        <AgentGlyph id={a.id} />
+        <AgentGlyph id={a.id} label={a.name} />
         <span className={`avail ${a.path ? (running ? "running" : "ok") : "off"}`} />
         {count > 0 && <span className="count">{count}</span>}
         {primaryAgent === a.id && <span className="primary-mark" title="Agente principal" />}
@@ -69,6 +89,9 @@ function AgentList() {
     <nav className="agent-rail">
       <span className="rail-label">Agentes</span>
       {agents.filter((a) => a.kind === "agent").map(render)}
+      <button className="agent-rail-item add" title="Adicionar agente" onClick={addAgent}>
+        <Icon name="plus" size={14} />
+      </button>
       <span className="rail-divider" />
       <span className="rail-label">Shell</span>
       {agents.filter((a) => a.kind === "shell" && a.path).map(render)}
@@ -80,10 +103,16 @@ function AgentPanel() {
   const agents = sessionsStore.use((s) => s.agents);
   const selectedId = sessionsStore.use((s) => s.selectedAgentId);
   const sessions = sessionsStore.use((s) => s.sessions);
-  const primaryId = sessionsStore.use((s) => s.primaryId);
   const viewedId = sessionsStore.use((s) => s.viewedId);
   const root = projectStore.use((s) => s.root);
+  const launchDock = settingsStore.use((s) => s.launchDock);
+  // estado completo: usado para saber a posição de cada sessão
+  const state = sessionsStore.use((s) => s);
   const agent = agents.find((a) => a.id === selectedId) ?? null;
+  const addingAgent = sessionsStore.use((s) => s.addingAgent);
+  const custom = settingsStore.use((s) => s.customAgents);
+
+  if (addingAgent) return <AddAgentForm />;
 
   if (!agent) {
     return (
@@ -96,22 +125,27 @@ function AgentPanel() {
   const mine = sessions.filter((s) => s.agentId === agent.id);
   const viewed = mine.find((s) => s.id === viewedId) ?? null;
 
-  const create = () => {
-    const id = startSession(agent, root);
-    if (!sessionsStore.get().primaryId) setPrimary(id);
-    else sessionsStore.set({ viewedId: id });
-  };
+  const create = () => launchSession(agent, root, launchDock);
 
   return (
     <div className="agent-panel">
       <header className="agent-panel-head">
-        <AgentGlyph id={agent.id} size={40} />
+        <AgentGlyph id={agent.id} label={agent.name} size={40} />
         <div className="agent-panel-title">
           <h2>{agent.name}</h2>
           <span className={agent.path ? "path" : "path off"} title={agent.path ?? ""}>
             {agent.path ?? `“${agent.command}” não encontrado no PATH`}
           </span>
         </div>
+        {custom.some((c) => c.id === agent.id) && (
+          <button
+            className="icon-btn danger"
+            title="Remover agente"
+            onClick={() => void removeCustomAgent(agent.id)}
+          >
+            <Icon name="trash" />
+          </button>
+        )}
         <button className="icon-btn" title="Recolher" onClick={() => uiStore.set({ left: "rail" })}>
           <Icon name="panelLeft" />
         </button>
@@ -120,6 +154,10 @@ function AgentPanel() {
       <button className="btn btn-primary btn-block" disabled={!agent.path} onClick={create}>
         <Icon name="plus" /> Nova sessão {root ? `em ${root.split(/[/\\]/).pop()}` : ""}
       </button>
+      <div className="launch-row">
+        <span className="dock-label">Abrir em: {DOCK_LABEL[launchDock]}</span>
+        <DockPicker value={launchDock} onPick={(d) => settingsStore.set({ launchDock: d })} />
+      </div>
 
       <div className="section-label">
         Sessões <span className="count">{mine.length}</span>
@@ -127,25 +165,23 @@ function AgentPanel() {
       <ul className="session-list">
         {mine.length === 0 && <li className="session-empty">Nenhuma sessão deste agente.</li>}
         {mine.map((s) => (
-          <SessionRow key={s.id} s={s} primary={s.id === primaryId} viewed={s.id === viewedId} />
+          <SessionRow key={s.id} s={s} dock={dockOf(s.id, state)} viewed={s.id === viewedId} />
         ))}
       </ul>
 
       <div className="agent-panel-view">
-        {viewed && viewed.id !== primaryId ? (
+        {viewed && !dockOf(viewed.id, state) ? (
           <>
             <div className="view-head">
               <span>{viewed.title}</span>
-              <button className="btn btn-sm" onClick={() => setPrimary(viewed.id)}>
-                <Icon name="star" size={13} /> Tornar principal
-              </button>
+              <DockPicker value={null} onPick={(d) => placeSession(viewed.id, d)} label="Mover para" />
             </div>
             <TerminalHost id={viewed.id} />
           </>
         ) : (
           <div className="panel-empty">
-            {mine.some((s) => s.id === primaryId)
-              ? "A sessão principal está no painel abaixo do grafo."
+            {mine.some((s) => dockOf(s.id, state))
+              ? "As sessões deste agente estão abertas no painel inferior ou na lateral direita."
               : "Selecione uma sessão para interagir aqui."}
           </div>
         )}
@@ -157,12 +193,14 @@ function AgentPanel() {
   );
 }
 
-function SessionRow({ s, primary, viewed }: { s: SessionMeta; primary: boolean; viewed: boolean }) {
+function SessionRow({ s, dock, viewed }: { s: SessionMeta; dock: Dock | null; viewed: boolean }) {
   const alive = s.state === "running" || s.state === "starting";
   return (
     <li
-      className={`session-row ${viewed ? "viewed" : ""} ${primary ? "primary" : ""}`}
-      onClick={() => !primary && sessionsStore.set({ viewedId: s.id })}
+      className={`session-row ${viewed ? "viewed" : ""} ${dock ? "primary" : ""}`}
+      title={dock ? `Aberta em: ${DOCK_LABEL[dock]} · arraste para mover` : "Clique para ver aqui · arraste para uma posição"}
+      onPointerDown={(e) => beginSessionDrag(e, s)}
+      onClick={() => !dock && sessionsStore.set({ viewedId: s.id })}
       onDoubleClick={() => setPrimary(s.id)}
     >
       <span className={`pulse ${s.state}`} />
@@ -171,13 +209,7 @@ function SessionRow({ s, primary, viewed }: { s: SessionMeta; primary: boolean; 
         <StateChip state={s.state} code={s.exitCode} />
       </div>
       <div className="session-actions" onClick={(e) => e.stopPropagation()}>
-        <button
-          className={`icon-btn ${primary ? "gold" : ""}`}
-          title={primary ? "Agente principal" : "Tornar principal"}
-          onClick={() => setPrimary(primary ? null : s.id)}
-        >
-          <Icon name="star" />
-        </button>
+        <DockPicker value={dock} onPick={(d) => placeSession(dock === d ? null : s.id, d)} label="Posição" />
         {alive ? (
           <button className="icon-btn" title="Encerrar processo" onClick={() => stopSession(s.id)}>
             <Icon name="stop" />

@@ -55,6 +55,12 @@ export const projectOpen = (path: string) => invoke<string>("project_open", { pa
 export const fsListDir = (path: string) => invoke<DirEntry[]>("fs_list_dir", { path });
 export const fsReadText = (path: string) => invoke<TextFile>("fs_read_text", { path });
 export const fsStatMtime = (path: string) => invoke<number>("fs_stat_mtime", { path });
+/** Cria arquivo/pasta em `parent` (aceita "a/b/c.ts"); retorna o caminho criado. */
+export const fsCreate = (parent: string, name: string, isDir: boolean) => invoke<string>("fs_create", { parent, name, isDir });
+export const fsRename = (path: string, newName: string) => invoke<string>("fs_rename", { path, newName });
+/** Move para a Lixeira. */
+export const fsDelete = (path: string) => invoke<void>("fs_delete", { path });
+export const revealInOs = (path: string) => invoke<void>("reveal_in_os", { path });
 /** Rejeita com `"conflict"` se o arquivo mudou no disco desde `expectedMtime`. */
 export const fsWriteText = (path: string, content: string, expectedMtime: number | null) =>
   invoke<number>("fs_write_text", { path, content, expectedMtime });
@@ -69,6 +75,8 @@ export const graphifyRun = () => invoke<GraphRunResult>("graphify_run");
 export const graphLoad = () => invoke<GraphData | null>("graph_load");
 
 export const agentsDetect = () => invoke<AgentInfo[]>("agents_detect");
+/** Caminho resolvido de um executável escolhido pelo usuário, ou null. */
+export const agentResolve = (command: string) => invoke<string | null>("agent_resolve", { command });
 
 export function ptySpawn(opts: {
   program: string;

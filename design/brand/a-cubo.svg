@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- A · Cubo-grafo: o hexágono atual vira um cubo isométrico feito de nós e arestas -->
+  <g stroke="#858B94" stroke-width="2" stroke-linecap="round" opacity="0.75">
+    <path d="M32 6 L54.5 19 L54.5 45 L32 58 L9.5 45 L9.5 19 Z" stroke-linejoin="round"/>
+    <path d="M32 32 L32 58 M32 32 L9.5 19 M32 32 L54.5 19"/>
+  </g>
+  <circle cx="32" cy="32" r="6" fill="#D5B66A"/>
+  <circle cx="32" cy="6" r="3.6" fill="#D5B66A"/>
+  <circle cx="54.5" cy="19" r="3.6" fill="#A83242"/>
+  <circle cx="54.5" cy="45" r="3.2" fill="#3F6FA6"/>
+  <circle cx="32" cy="58" r="3.6" fill="#D5B66A"/>
+  <circle cx="9.5" cy="45" r="3.2" fill="#3F6FA6"/>
+  <circle cx="9.5" cy="19" r="3.6" fill="#39BFFF"/>
+</svg>

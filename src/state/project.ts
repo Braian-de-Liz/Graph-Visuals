@@ -55,7 +55,7 @@ async function refreshIndex() {
   }
 }
 
-export async function openProject(path: string) {
+export async function openProject(path: string, opts: { quiet?: boolean } = {}) {
   try {
     const root = await projectOpen(path);
     projectStore.set({
@@ -74,8 +74,18 @@ export async function openProject(path: string) {
     void refreshIndex();
     void loadForProject();
   } catch (e) {
-    toast(`Não foi possível abrir o projeto: ${e}`, "error");
+    if (opts.quiet) toast(`Não foi possível reabrir o último projeto (${baseName(path)}).`, "error");
+    else toast(`Não foi possível abrir o projeto: ${e}`, "error");
   }
+}
+
+/** Ao iniciar o app: reabre o último projeto aberto (o primeiro dos recentes). */
+let restored = false;
+export function restoreLastProject() {
+  if (restored || projectStore.get().root) return;
+  restored = true;
+  const last = settingsStore.get().recentProjects[0];
+  if (last) void openProject(last, { quiet: true });
 }
 
 export async function pickAndOpenProject() {

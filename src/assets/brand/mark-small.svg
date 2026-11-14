@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- B1 · Cintilante (pequeno): para 16–24 px -->
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>
+    <radialGradient id="n0" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#FFF4D2"/><stop offset="0.45" stop-color="#F6D47C"/><stop offset="1" stop-color="#C8973A"/></radialGradient>
+    <radialGradient id="n1" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#FFC7D0"/><stop offset="0.45" stop-color="#E8475F"/><stop offset="1" stop-color="#9A1F35"/></radialGradient>
+    <radialGradient id="n2" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#D3E5FF"/><stop offset="0.45" stop-color="#5C98EC"/><stop offset="1" stop-color="#2A5698"/></radialGradient>
+    <radialGradient id="n3" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#EEF0F3"/><stop offset="0.45" stop-color="#B3B9C2"/><stop offset="1" stop-color="#6E747D"/></radialGradient>
+    <radialGradient id="n4" cx="0.36" cy="0.32" r="0.75"><stop offset="0" stop-color="#E3F8FF"/><stop offset="0.45" stop-color="#4ED3FF"/><stop offset="1" stop-color="#168AD0"/></radialGradient>
+  </defs>
+  <line x1="27" y1="31" x2="50" y2="12" stroke="#AEB4BD" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <line x1="27" y1="31" x2="53" y2="44" stroke="#AEB4BD" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <line x1="27" y1="31" x2="12" y2="49" stroke="#AEB4BD" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <line x1="27" y1="31" x2="11" y2="13" stroke="#AEB4BD" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <line x1="50" y1="12" x2="53" y2="44" stroke="#AEB4BD" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <g filter="url(#glow)" opacity="0.8">
+    <circle cx="27" cy="31" r="10" fill="#F6D47C"/>
+    <circle cx="50" cy="12" r="6.5" fill="#F6D47C"/>
+    <circle cx="53" cy="44" r="7" fill="#E8475F"/>
+    <circle cx="12" cy="49" r="6.5" fill="#5C98EC"/>
+    <circle cx="11" cy="13" r="5" fill="#4ED3FF"/>
+  </g>
+  <circle cx="27" cy="31" r="10" fill="url(#n0)"/>
+  <circle cx="50" cy="12" r="6.5" fill="url(#n0)"/>
+  <circle cx="53" cy="44" r="7" fill="url(#n1)"/>
+  <circle cx="12" cy="49" r="6.5" fill="url(#n2)"/>
+  <circle cx="11" cy="13" r="5" fill="url(#n4)"/>
+  <path d="M23.5 23.3Q23.5 27.5 27.7 27.5Q23.5 27.5 23.5 31.7Q23.5 27.5 19.3 27.5Q23.5 27.5 23.5 23.3Z" fill="#FFFFFF" opacity="0.95"/>
+</svg>

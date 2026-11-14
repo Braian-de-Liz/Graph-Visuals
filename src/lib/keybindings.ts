@@ -129,7 +129,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { id: "shortcuts", group: "Geral", label: "Atalhos de teclado", keys: ["ctrl+k ctrl+s"], run: () => uiStore.set({ shortcutsOpen: true }) },
 
   { id: "toggleSidebar", group: "Painéis", label: "Alternar barra lateral (agentes)", keys: ["ctrl+b"], skipShell: true, run: () => uiStore.set((s) => ({ left: s.left === "hidden" ? "rail" : "hidden" })) },
-  { id: "toggleAuxBar", group: "Painéis", label: "Alternar explorador de arquivos (direita)", keys: ["ctrl+l", "ctrl+alt+b"], run: () => uiStore.set((s) => ({ rightOpen: !s.rightOpen })) },
+  { id: "toggleAuxBar", group: "Painéis", label: "Alternar explorador de arquivos (direita)", keys: ["ctrl+l", "ctrl+alt+b"], skipShell: true, run: () => uiStore.set((s) => ({ rightOpen: !s.rightOpen })) },
   { id: "showExplorer", group: "Painéis", label: "Mostrar explorador", keys: ["ctrl+shift+e"], skipShell: true, run: showExplorer },
   { id: "togglePanel", group: "Painéis", label: "Alternar painel (agente principal)", keys: ["ctrl+j"], skipShell: true, run: () => uiStore.set((s) => ({ bottomCollapsed: !s.bottomCollapsed, bottomExpanded: false })) },
   { id: "maximizePanel", group: "Painéis", label: "Maximizar painel", keys: [], run: () => uiStore.set((s) => ({ bottomCollapsed: false, bottomExpanded: !s.bottomExpanded })) },

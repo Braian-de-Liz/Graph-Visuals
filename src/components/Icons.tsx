@@ -1,5 +1,7 @@
 // Ícones de traço (24x24), desenhados para a identidade Graph Visuals.
 import type { SVGProps } from "react";
+import markUrl from "../assets/brand/mark.svg";
+import markSmallUrl from "../assets/brand/mark-small.svg";
 
 type IconName =
   | "search" | "settings" | "minimize" | "maximize" | "close" | "plus" | "stop" | "star"
@@ -62,32 +64,98 @@ export function Icon({ name, size = 16, ...rest }: { name: IconName; size?: numb
   );
 }
 
-/** Marca do Graph Visuals: hexágono com núcleo, em Vision Gold (identidade). */
+/**
+ * Marca do Graph Visuals (B1 · Cintilante). Até 24 px usa a versão
+ * simplificada, que continua legível; acima disso, o símbolo completo.
+ * Fontes em design/brand/ (gerador gen-b.mjs).
+ */
 export function BrandMark({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden fill="none" style={{ color: "#D5B66A" }}>
-      <path d="M16 3l11.3 6.5v13L16 29 4.7 22.5v-13z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M16 10.5l4.8 2.75v5.5L16 21.5l-4.8-2.75v-5.5z" stroke="currentColor" strokeWidth="1.4" opacity="0.45" />
-      <circle cx="16" cy="16" r="2" fill="currentColor" />
-    </svg>
-  );
+  return <img src={size <= 24 ? markSmallUrl : markUrl} width={size} height={size} alt="" aria-hidden draggable={false} className="brand-mark" />;
 }
 
-/** Monograma de cada CLI: plano, monocromático. */
-const AGENT_LABEL: Record<string, string> = {
-  claude: "CC",
-  opencode: "OC",
-  codex: "CX",
-  kiro: "K",
-  pwsh: ">_",
-  powershell: ">_",
-  cmd: "C:",
+/**
+ * Ícones dos CLIs. Claude Code usa o Clawd, o mascote em pixel art do próprio
+ * Claude Code (grade 12×8, olhos pretos, quatro pernas). OpenAI (Codex), GitHub
+ * Copilot, OpenCode e PowerShell vêm do Simple Icons (CC0); o fantasma do Kiro,
+ * de kiro.dev. A logo do Antigravity vem do LobeHub Icons (monocromática).
+ */
+interface BrandIcon {
+  viewBox: string;
+  color: string;
+  paths: { d: string; fill?: string }[];
+}
+const AGENT_ICONS: Record<string, BrandIcon> = {
+  claude: {
+    // viewBox centralizado na grade 12×8 do Clawd.
+    viewBox: "0 -2 12 12",
+    color: "#D97757",
+    paths: [
+      // corpo e braços
+      { d: "M2 0h8v6H2zM0 2h2v2H0zM10 2h2v2h-2z" },
+      // pernas
+      { d: "M2 6h1v2H2zM4 6h1v2H4zM7 6h1v2H7zM9 6h1v2H9z" },
+      // olhos
+      { d: "M4 1h1v2H4zM7 1h1v2H7z", fill: "#0B0B0D" },
+    ],
+  },
+  codex: {
+    viewBox: "0 0 24 24",
+    color: "#EDEDEF",
+    paths: [{ d: "M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z" }],
+  },
+  copilot: {
+    viewBox: "0 0 24 24",
+    color: "#EDEDEF",
+    paths: [{ d: "M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.980 11.978 1.980c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z" }],
+  },
+  opencode: {
+    viewBox: "0 0 24 24",
+    color: "#EDEDEF",
+    paths: [{ d: "M22 24H2V0h20zM17 4.8H7v14.4h10z" }],
+  },
+  antigravity: {
+    viewBox: "0 0 24 24",
+    color: "#EDEDEF",
+    paths: [
+      {
+        d: "M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z",
+      },
+    ],
+  },
+  kiro: {
+    viewBox: "262 190 680 820",
+    color: "#9046FF",
+    paths: [
+      { d: "M398.554 818.914C316.315 1001.03 491.477 1046.74 620.672 940.156C658.687 1059.66 801.052 970.473 852.234 877.795C964.787 673.567 919.318 465.357 907.64 422.374C827.637 129.443 427.623 128.946 358.8 423.865C342.651 475.544 342.402 534.18 333.458 595.051C328.986 625.86 325.507 645.488 313.83 677.785C306.873 696.424 297.68 712.819 282.773 740.645C259.915 783.881 269.604 867.113 387.87 823.883L399.051 818.914H398.554Z" },
+      { d: "M636.123 549.353C603.328 549.353 598.359 510.097 598.359 486.742C598.359 465.623 602.086 448.977 609.293 438.293C615.504 428.852 624.697 424.131 636.123 424.131C647.555 424.131 657.492 428.852 664.447 438.541C672.398 449.474 676.623 466.12 676.623 486.742C676.623 525.998 661.471 549.353 636.375 549.353H636.123Z", fill: "#0B0B0D" },
+      { d: "M771.24 549.353C738.445 549.353 733.477 510.097 733.477 486.742C733.477 465.623 737.203 448.977 744.41 438.293C750.621 428.852 759.814 424.131 771.24 424.131C782.672 424.131 792.609 428.852 799.564 438.541C807.516 449.474 811.74 466.12 811.74 486.742C811.74 525.998 796.588 549.353 771.492 549.353H771.24Z", fill: "#0B0B0D" },
+    ],
+  },
+  pwsh: {
+    viewBox: "0 0 24 24",
+    color: "#5391FE",
+    paths: [{ d: "M23.181 2.974c.568 0 .923.463.792 1.035l-3.659 15.982c-.13.572-.697 1.035-1.265 1.035H.819c-.568 0-.923-.463-.792-1.035L3.686 4.009c.13-.572.697-1.035 1.265-1.035zm-8.375 9.346c.251-.394.227-.905-.09-1.243L9.122 5.125c-.38-.404-1.037-.407-1.466-.003-.429.402-.468 1.056-.088 1.46l4.662 4.96v.11l-7.42 5.374c-.45.327-.533.977-.187 1.453.346.476.991.597 1.44.27l8.229-5.91c.28-.196.438-.365.514-.52zm-2.796 4.399a.928.928 0 00-.934.923c0 .51.418.923.934.923h4.433a.928.928 0 00.934-.923.928.928 0 00-.934-.923z" }],
+  },
 };
+AGENT_ICONS.powershell = AGENT_ICONS.pwsh;
 
-export function AgentGlyph({ id, size = 34 }: { id: string; size?: number }) {
+/** Monograma para CLIs sem ícone conhecido. */
+const AGENT_LABEL: Record<string, string> = { cmd: "C:" };
+
+/** `label` (nome do agente) gera o monograma de agentes personalizados. */
+export function AgentGlyph({ id, label, size = 34 }: { id: string; label?: string; size?: number }) {
+  const icon = AGENT_ICONS[id];
   return (
     <span className="agent-glyph" style={{ width: size, height: size, fontSize: Math.round(size * 0.34) }}>
-      {AGENT_LABEL[id] ?? id.slice(0, 2).toUpperCase()}
+      {icon ? (
+        <svg width={Math.round(size * 0.54)} height={Math.round(size * 0.54)} viewBox={icon.viewBox} aria-hidden fill={icon.color}>
+          {icon.paths.map((p, i) => (
+            <path key={i} d={p.d} fill={p.fill} />
+          ))}
+        </svg>
+      ) : (
+        AGENT_LABEL[id] ?? (label ?? id).slice(0, 2).toUpperCase()
+      )}
     </span>
   );
 }

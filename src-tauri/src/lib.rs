@@ -5,6 +5,7 @@
 //! nem renderização.
 
 mod agents;
+mod fs_edit;
 mod fs_ops;
 mod graph;
 mod project;
@@ -27,11 +28,16 @@ pub fn run() {
             fs_ops::fs_stat_mtime,
             fs_ops::fs_write_text,
             fs_ops::fs_index,
+            fs_edit::fs_create,
+            fs_edit::fs_rename,
+            fs_edit::fs_delete,
+            fs_edit::reveal_in_os,
             watcher::watch_start,
             watcher::watch_stop,
             graph::graphify_run,
             graph::graph_load,
             agents::agents_detect,
+            agents::agent_resolve,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,

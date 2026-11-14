@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- D · Tríade: um núcleo e três nós nas cores primária, secundária e de estrutura.
+       O mais simples: continua legível a 16 px. -->
+  <g stroke="#858B94" stroke-width="2.4" stroke-linecap="round" opacity="0.75">
+    <path d="M32 34 L32 9 M32 34 L53 47 M32 34 L11 47"/>
+    <path d="M32 9 L53 47 L11 47 Z" stroke-linejoin="round" opacity="0.45"/>
+  </g>
+  <circle cx="32" cy="34" r="8" fill="#D5B66A"/>
+  <circle cx="32" cy="9" r="5" fill="#D5B66A"/>
+  <circle cx="53" cy="47" r="5" fill="#A83242"/>
+  <circle cx="11" cy="47" r="5" fill="#3F6FA6"/>
+</svg>

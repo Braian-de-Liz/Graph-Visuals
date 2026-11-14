@@ -420,17 +420,9 @@ export class GraphScene {
     this.scene.add(this.edges);
 
     const sphere = geom.boundingSphere!;
-    if (stars) {
-      // Visto de cima: enquadra pela maior distância horizontal ao centro.
-      this.center.copy(sphere.center);
-      let maxR = 10;
-      for (let i = 0; i < n; i++)
-        maxR = Math.max(maxR, Math.hypot(positions[i * 3] - this.center.x, positions[i * 3 + 2] - this.center.z));
-      this.radius = maxR;
-    } else {
-      this.center.copy(sphere.center);
-      this.radius = Math.max(sphere.radius, 10);
-    }
+    // O enquadramento exato é feito em resetView, a partir das posições.
+    this.center.copy(sphere.center);
+    this.radius = Math.max(sphere.radius, 10);
     this.buildDust(stars);
 
     this.selected = null; // GraphCanvas reaplica a seleção pelo id
@@ -627,14 +619,27 @@ export class GraphScene {
   }
 
   resetView(animate = true) {
-    // O grafo é um disco visto de cima em ângulo: enquadra pela largura
-    // (FOV horizontal), sem deixar a altura projetada sair da tela.
-    // Visto de cima: enquadra o grafo pelo menor campo de visão.
+    // Vista padrão isométrica: a câmera olha na diagonal (1, 1, 1) e a
+    // distância é a mínima que mantém todos os nós dentro da tela, levando em
+    // conta a perspectiva (nós mais próximos da câmera ocupam mais espaço).
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
-    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
-    const dist = (this.radius / Math.tan(Math.min(hfov, vfov) / 2)) * 1.0;
-    // Quase perpendicular ao disco; a leve inclinação mantém a órbita estável.
-    const viewDir = new THREE.Vector3(0, 1, 0.14).normalize();
+    const tanV = Math.tan(vfov / 2);
+    const tanH = tanV * this.camera.aspect;
+    const viewDir = new THREE.Vector3(1, 1, 1).normalize();
+    const u = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), viewDir).normalize();
+    const v = new THREE.Vector3().crossVectors(viewDir, u).normalize();
+    let dist = this.radius / Math.min(tanH, tanV);
+    const pos = this.nodes?.geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
+    if (pos && pos.count) {
+      dist = 0;
+      const d = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        d.set(pos.getX(i), pos.getY(i), pos.getZ(i)).sub(this.center);
+        const need = Math.max(Math.abs(d.dot(u)) / tanH, Math.abs(d.dot(v)) / tanV) + d.dot(viewDir);
+        if (need > dist) dist = need;
+      }
+      dist = Math.max(dist * 1.06, 30);
+    }
     if (!animate) {
       this.controls.target.copy(this.center);
       this.camera.position.copy(this.center).addScaledVector(viewDir, dist);

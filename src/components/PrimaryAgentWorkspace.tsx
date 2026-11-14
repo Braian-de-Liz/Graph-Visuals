@@ -1,8 +1,11 @@
 import { AgentGlyph, Icon } from "./Icons";
 import { SessionInput, StateChip, TerminalHost } from "./AgentSessionView";
-import { closeSession, sessionsStore, setPrimary, startSession, stopSession } from "../state/sessions";
+import { closeSession, launchSession, placeSession, sessionsStore, setPrimary, stopSession } from "../state/sessions";
 import { projectStore } from "../state/project";
 import { uiStore } from "../state/ui";
+import { settingsStore } from "../state/settings";
+import { DOCK_LABEL, DockPicker } from "./RightDock";
+import { beginSessionDrag } from "../state/dnd";
 
 /** Painel central inferior: a sessão escolhida como agente principal. */
 export function PrimaryAgentWorkspace() {
@@ -12,13 +15,18 @@ export function PrimaryAgentWorkspace() {
   const collapsed = uiStore.use((s) => s.bottomCollapsed);
   const expanded = uiStore.use((s) => s.bottomExpanded);
   const root = projectStore.use((s) => s.root);
+  const launchDock = settingsStore.use((s) => s.launchDock);
   const session = sessions.find((s) => s.id === primaryId) ?? null;
 
   const toggleCollapse = () => uiStore.set({ bottomCollapsed: !collapsed, bottomExpanded: false });
 
   return (
     <section className={`primary-workspace ${collapsed ? "collapsed" : ""}`}>
-      <header className="primary-head" onDoubleClick={toggleCollapse}>
+      <header
+        className={`primary-head ${session ? "has-session" : ""}`}
+        onDoubleClick={toggleCollapse}
+        onPointerDown={(e) => session && beginSessionDrag(e, session)}
+      >
         {session ? (
           <>
             <AgentGlyph id={session.agentId} size={24} />
@@ -53,6 +61,7 @@ export function PrimaryAgentWorkspace() {
         )}
         {session && (
           <>
+            <DockPicker value="primary" onPick={(d) => placeSession(session.id, d)} label="Mover para" />
             {session.state === "running" || session.state === "starting" ? (
               <button className="icon-btn" title="Encerrar processo" onClick={() => stopSession(session.id)}>
                 <Icon name="stop" />
@@ -95,13 +104,17 @@ export function PrimaryAgentWorkspace() {
                     <button
                       key={a.id}
                       className="quick-agent"
-                      onClick={() => setPrimary(startSession(a, root))}
-                      title={`Iniciar ${a.name}`}
+                      onClick={() => launchSession(a, root, launchDock)}
+                      title={`Iniciar ${a.name} · ${DOCK_LABEL[launchDock]}`}
                     >
                       <AgentGlyph id={a.id} size={28} />
                       <span>{a.name}</span>
                     </button>
                   ))}
+              </div>
+              <div className="launch-row centered">
+                <span>Abrir em: {DOCK_LABEL[launchDock]}</span>
+                <DockPicker value={launchDock} onPick={(d) => settingsStore.set({ launchDock: d })} />
               </div>
             </div>
           )}

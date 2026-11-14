@@ -24,6 +24,10 @@ interface Layout {
   rightWidth: number;
   bottomHeight: number;
   bottomCollapsed: boolean;
+  /** Proporção dos andares da lateral direita (agente acima, arquivos, agente abaixo). */
+  rightWeights: { top: number; files: number; bottom: number };
+  /** Proporção dos andares da lateral esquerda (agente acima, painel do agente, agente abaixo). */
+  leftWeights: { top: number; files: number; bottom: number };
 }
 
 interface UiState extends Layout {
@@ -40,14 +44,17 @@ interface UiState extends Layout {
 
 const KEY = "gv.layout";
 
-const layout = loadJson<Layout>(KEY, {
-  left: "rail",
+const layout = {
+  left: "rail" as LeftMode,
   leftWidth: 340,
   rightOpen: false, // a lateral direita inicia recolhida
   rightWidth: 300,
   bottomHeight: 300,
   bottomCollapsed: false,
-});
+  rightWeights: { top: 1, files: 1, bottom: 1 },
+  leftWeights: { top: 1, files: 1, bottom: 1 },
+  ...loadJson<Partial<Layout>>(KEY, {}),
+};
 
 export const uiStore = createStore<UiState>({
   ...layout,
@@ -73,6 +80,8 @@ uiStore.subscribe(() => {
     rightWidth: s.rightWidth,
     bottomHeight: s.bottomHeight,
     bottomCollapsed: s.bottomCollapsed,
+    rightWeights: s.rightWeights,
+    leftWeights: s.leftWeights,
   } satisfies Layout);
 });
 

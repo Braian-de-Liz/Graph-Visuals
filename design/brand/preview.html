@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Graph Visuals · propostas de símbolo</title>
+<style>
+  body { margin: 0; padding: 36px; background: #050506; color: #EDEDEF; font: 14px "Segoe UI", Inter, system-ui, sans-serif; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 24px; }
+  h1 span { color: #71717A; font-weight: 400; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 22px; background: #000; }
+  .card h2 { margin: 0 0 16px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+  .card h2 small { display: block; color: #71717A; font-weight: 400; margin-top: 4px; }
+  .hero { display: flex; justify-content: center; padding: 10px 0 18px; }
+  .sizes { display: flex; align-items: flex-end; gap: 18px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.06); }
+  .bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 10px; background: #000; border: 1px solid rgba(255,255,255,.06); border-radius: 6px; font-size: 13px; }
+  .bar b { font-weight: 600; } .bar i { font-style: normal; color: #A1A1AA; }
+  .light { margin-top: 12px; padding: 10px; background: #F4F4F5; border-radius: 6px; display: flex; gap: 14px; align-items: center; }
+</style>
+</head>
+<body>
+<h1>Graph Visuals <span>· propostas de símbolo (grafo)</span></h1>
+<div class="grid" id="grid"></div>
+<script>
+  const marks = [
+    ["b1-cintilante.svg", "B1 · Cintilante", "Símbolo principal (≥ 32 px)"],
+    ["b1-cintilante-pequeno.svg", "B1 · Cintilante (pequeno)", "Barra superior, favicon (16–24 px)"],
+    ["b1-cintilante-icone.svg", "B1 · Cintilante (ícone)", "Ícone do app e da barra de tarefas"],
+  ];
+  const grid = document.getElementById("grid");
+  for (const [file, name, desc] of marks) {
+    grid.insertAdjacentHTML("beforeend", `
+      <div class="card">
+        <h2>${name}<small>${desc}</small></h2>
+        <div class="hero"><img src="${file}" width="160" height="160"></div>
+        <div class="sizes">
+          <img src="${file}" width="64"><img src="${file}" width="32"><img src="${file}" width="20"><img src="${file}" width="16">
+        </div>
+        <div class="bar"><img src="${file}" width="20"><span><b>Graph</b> <i>Visuals</i></span></div>
+        <div class="light"><img src="${file}" width="32"><img src="${file}" width="16"></div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

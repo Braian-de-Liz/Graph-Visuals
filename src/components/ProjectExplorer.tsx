@@ -1,5 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { FileTree } from "./FileTree";
+import { openContextMenu } from "./ContextMenu";
+import { menuFor } from "../state/explorer";
 import { Icon } from "./Icons";
 import { matchPath } from "../lib/fuzzy";
 import { joinRel, toRel } from "../lib/paths";
@@ -111,7 +113,12 @@ function FlatList({ rels, root, empty }: { rels: string[]; root: string; empty: 
       {rels.map((rel) => {
         const slash = rel.lastIndexOf("/");
         return (
-          <li key={rel} onClick={() => openFileAndLocate(joinRel(root, rel))} title={rel}>
+          <li
+            key={rel}
+            onClick={() => openFileAndLocate(joinRel(root, rel))}
+            onContextMenu={(e) => openContextMenu(e, menuFor({ path: joinRel(root, rel), isDir: false }, openFileAndLocate))}
+            title={rel}
+          >
             <Icon name="file" size={14} />
             <span className="name">{rel.slice(slash + 1)}</span>
             <span className="dir">{rel.slice(0, Math.max(slash, 0))}</span>
