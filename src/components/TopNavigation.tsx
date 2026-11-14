@@ -11,7 +11,6 @@ const STATUS: Record<GraphStatus, { label: string; tone: string }> = {
   synced: { label: "GRAPH SYNCED", tone: "ok" },
   outdated: { label: "OUTDATED", tone: "warn" },
   error: { label: "GRAPH ERROR", tone: "error" },
-  test: { label: "TEST GRAPH", tone: "warn" },
 };
 
 /** Barra superior minimalista: identidade, projeto, estado do grafo e comandos globais. */

@@ -11,10 +11,12 @@ import { gvHighlight, gvTheme, languageFor } from "../editor/codemirror";
 import { importLinks } from "../editor/importLinks";
 import { fsReadText, fsStatMtime, fsWriteText, onFsChanged } from "../lib/ipc";
 import { baseName, pathKey, toRel } from "../lib/paths";
-import { editorStore, registerEditorHandlers, type EditorMode } from "../state/editor";
+import { editorStore, isMarkdown, registerEditorHandlers, type EditorMode, type MarkdownView } from "../state/editor";
+import { MarkdownPreview } from "./MarkdownPreview";
 import { projectStore } from "../state/project";
 import { toast } from "../state/ui";
 import { markSelfWrite } from "../state/activity";
+import { settingsStore } from "../state/settings";
 
 /** Ctrl+Shift+Enter (VS Code): insere uma linha acima e move o cursor para ela. */
 function insertLineAbove(view: EditorView): boolean {
@@ -42,6 +44,12 @@ export function FloatingCodeEditor() {
   const mode = editorStore.use((s) => s.mode);
   const openPath = editorStore.use((s) => s.openPath);
   const dirty = editorStore.use((s) => s.dirty);
+  const mdView = editorStore.use((s) => s.mdView);
+  const isMd = isMarkdown(openPath);
+  // Texto do Markdown aberto, para a prévia (atualizado a cada edição).
+  const [mdSource, setMdSource] = useState("");
+  const isMdRef = useRef(false);
+  isMdRef.current = isMd;
   const token = editorStore.use((s) => s.requestToken);
   const root = projectStore.use((s) => s.root);
 
@@ -51,8 +59,14 @@ export function FloatingCodeEditor() {
   const pathRef = useRef<string | null>(null);
   const langComp = useRef(new Compartment());
   const roComp = useRef(new Compartment());
-  const saveRef = useRef<(force?: boolean) => void>(() => {});
+  const saveRef = useRef<(force?: boolean, auto?: boolean) => Promise<boolean>>(async () => false);
   const loadingRef = useRef(false);
+  // Salvamento automático: contador de edições, timer e estado atual (para callbacks do CodeMirror).
+  const changeSeqRef = useRef(0);
+  const autoTimerRef = useRef(0);
+  const savingRef = useRef(false);
+  const scheduleRef = useRef<() => void>(() => {});
+  const bannerRef = useRef<Banner | null>(null);
 
   const [banner, setBanner] = useState<Banner | null>(null);
   const [readOnly, setReadOnly] = useState(false);
@@ -82,7 +96,7 @@ export function FloatingCodeEditor() {
       gvHighlight,
       langComp.current.of([]),
       roComp.current.of(EditorState.readOnly.of(false)),
-      keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (saveRef.current(), true) }]),
+      keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (void saveRef.current(), true) }]),
       // Complementos no padrão VS Code (o restante já vem do basicSetup).
       Prec.high(
         keymap.of([
@@ -93,12 +107,27 @@ export function FloatingCodeEditor() {
       ),
       EditorView.clickAddsSelectionRange.of((e) => e.altKey),
       EditorView.updateListener.of((u) => {
-        if (u.docChanged && !loadingRef.current && !editorStore.get().dirty) editorStore.set({ dirty: true });
+        if (u.docChanged && !loadingRef.current) {
+          changeSeqRef.current++;
+          if (!editorStore.get().dirty) editorStore.set({ dirty: true });
+          scheduleRef.current();
+          if (isMdRef.current) setMdSource(u.state.doc.toString());
+        }
         if (u.selectionSet || u.docChanged) {
           const head = u.state.selection.main.head;
           const line = u.state.doc.lineAt(head);
           setCursor({ line: line.number, col: head - line.from + 1 });
         }
+      }),
+      // Ao sair do editor, salva na hora (como o "onFocusChange" do VS Code).
+      EditorView.domEventHandlers({
+        blur: () => {
+          if (settingsStore.get().autoSave) {
+            clearTimeout(autoTimerRef.current);
+            void saveRef.current(false, true);
+          }
+          return false;
+        },
       }),
     ];
   }
@@ -126,6 +155,7 @@ export function FloatingCodeEditor() {
       setReadOnly(file.lossy);
       setBanner(null);
       editorStore.set({ openPath: path, dirty: false });
+      setMdSource(isMarkdown(path) ? file.content : "");
       if (keepView) {
         const pos = Math.min(prevSel, view.state.doc.length);
         view.dispatch({ selection: { anchor: pos } });
@@ -151,24 +181,47 @@ export function FloatingCodeEditor() {
     requestAnimationFrame(() => view.focus());
   }
 
-  async function save(force = false) {
+  /**
+   * Grava o arquivo. `auto`: salvamento automático, sem aviso, e ignorado
+   * enquanto houver um conflito pendente. Retorna true se gravou.
+   */
+  async function save(force = false, auto = false): Promise<boolean> {
     const view = viewRef.current;
     const path = pathRef.current;
-    if (!view || !path || readOnly) return;
+    if (!view || !path || readOnly) return false;
+    if (auto && (bannerRef.current || savingRef.current || !editorStore.get().dirty)) return false;
+    const seq = changeSeqRef.current;
+    savingRef.current = true;
     try {
       const r = root ? toRel(root, path) : null;
       if (r) markSelfWrite(r);
       const mtime = await fsWriteText(path, view.state.doc.toString(), force ? null : mtimeRef.current);
+      if (pathRef.current !== path) return true; // trocou de arquivo durante a gravação
       mtimeRef.current = mtime;
-      editorStore.set({ dirty: false });
+      // Digitou durante a gravação: continua "sujo" e agenda outra.
+      if (changeSeqRef.current === seq) editorStore.set({ dirty: false });
+      else scheduleAutoSave();
       setBanner(null);
-      toast(`${baseName(path)} salvo`);
+      if (!auto) toast(`${baseName(path)} salvo`);
+      return true;
     } catch (e) {
       if (String(e) === "conflict") setBanner({ kind: "conflict-save" });
       else toast(`Falha ao salvar: ${e}`, "error");
+      return false;
+    } finally {
+      savingRef.current = false;
     }
   }
   saveRef.current = save;
+
+  function scheduleAutoSave() {
+    clearTimeout(autoTimerRef.current);
+    const { autoSave, autoSaveDelay } = settingsStore.get();
+    if (!autoSave) return;
+    autoTimerRef.current = window.setTimeout(() => void saveRef.current(false, true), autoSaveDelay);
+  }
+  scheduleRef.current = scheduleAutoSave;
+  bannerRef.current = banner;
 
   // --- pedidos de abertura ---
   useEffect(() => {
@@ -178,8 +231,15 @@ export function FloatingCodeEditor() {
       goToLine(requestedLine);
       return;
     }
-    if (editorStore.get().dirty) setBanner({ kind: "switch", path: requestedPath, line: requestedLine });
-    else void load(requestedPath, requestedLine);
+    if (editorStore.get().dirty) {
+      // Com salvamento automático, grava e troca; se a gravação falhar (ex.: conflito), pergunta.
+      if (settingsStore.get().autoSave && !bannerRef.current) {
+        clearTimeout(autoTimerRef.current);
+        void saveRef.current(false, true).then((ok) =>
+          ok ? load(requestedPath, requestedLine) : setBanner({ kind: "switch", path: requestedPath, line: requestedLine }),
+        );
+      } else setBanner({ kind: "switch", path: requestedPath, line: requestedLine });
+    } else void load(requestedPath, requestedLine);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -212,6 +272,7 @@ export function FloatingCodeEditor() {
   }, [root]);
 
   function closeNow() {
+    clearTimeout(autoTimerRef.current);
     pathRef.current = null;
     mtimeRef.current = null;
     setBanner(null);
@@ -221,13 +282,19 @@ export function FloatingCodeEditor() {
     editorStore.set({ openPath: null, dirty: false, visible: false, mode: "compact" });
   }
 
-  const requestClose = () => (editorStore.get().dirty ? setBanner({ kind: "close" }) : closeNow());
+  const requestClose = () => {
+    if (!editorStore.get().dirty) return closeNow();
+    if (settingsStore.get().autoSave && !bannerRef.current) {
+      clearTimeout(autoTimerRef.current);
+      void saveRef.current(false, true).then((ok) => (ok ? closeNow() : setBanner({ kind: "close" })));
+    } else setBanner({ kind: "close" });
+  };
   const requestCloseRef = useRef(requestClose);
   requestCloseRef.current = requestClose;
   useEffect(() => {
     registerEditorHandlers({
       save: () => {
-        if (pathRef.current && editorStore.get().visible) saveRef.current();
+        if (pathRef.current && editorStore.get().visible) void saveRef.current();
       },
       close: () => {
         if (pathRef.current) requestCloseRef.current();
@@ -272,6 +339,7 @@ export function FloatingCodeEditor() {
         <span className="spacer" />
         {readOnly && <span className="badge red">somente leitura · não UTF-8</span>}
         {loading && <span className="badge">carregando…</span>}
+        {isMd && <MarkdownViewSwitch value={mdView} onChange={(v) => editorStore.set({ mdView: v })} />}
         <EditorToolbar
           mode={mode}
           dirty={dirty}
@@ -332,11 +400,31 @@ export function FloatingCodeEditor() {
         </div>
       )}
 
-      <div className="editor-host" ref={hostRef} />
+      <div className={`editor-main mdv-${isMd ? mdView : "code"}`}>
+        <div className="editor-host" ref={hostRef} />
+        {isMd && mdView !== "code" && openPath && <MarkdownPreview source={mdSource} path={openPath} />}
+      </div>
       <footer className="editor-status">
         <span>Ln {cursor.line}, Col {cursor.col}</span>
         <span>Ctrl+S salvar · Ctrl+F buscar</span>
       </footer>
+    </div>
+  );
+}
+
+function MarkdownViewSwitch({ value, onChange }: { value: MarkdownView; onChange: (v: MarkdownView) => void }) {
+  const opts: { v: MarkdownView; label: string; title: string }[] = [
+    { v: "code", label: "Código", title: "Só o código" },
+    { v: "split", label: "Lado a lado", title: "Código e prévia (Ctrl+K V)" },
+    { v: "preview", label: "Prévia", title: "Só a prévia (Ctrl+Shift+V)" },
+  ];
+  return (
+    <div className="md-switch" role="radiogroup" aria-label="Visualização do Markdown">
+      {opts.map((o) => (
+        <button key={o.v} role="radio" aria-checked={value === o.v} className={value === o.v ? "on" : ""} title={o.title} onClick={() => onChange(o.v)}>
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

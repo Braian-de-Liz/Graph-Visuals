@@ -14,7 +14,7 @@ export function GraphControls() {
 
   return (
     <div className="graph-controls glass">
-      <button className="icon-btn" title="Visão geral" disabled={!hasGraph} onClick={() => sceneApi()?.resetView()}>
+      <button className="icon-btn" title="Visão geral (Ctrl+E)" disabled={!hasGraph} onClick={() => sceneApi()?.resetView()}>
         <Icon name="home" />
       </button>
       <button

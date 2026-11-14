@@ -2480,3 +2480,185 @@ body.dragging-session * {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* ---------- prévia de Markdown ---------- */
+
+.editor-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.editor-main > .editor-host {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.editor-main.mdv-preview > .editor-host {
+  display: none;
+}
+.editor-main.mdv-split > .md-preview {
+  border-left: 1px solid var(--line);
+}
+.md-switch {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.md-switch button {
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.md-switch button:hover {
+  color: var(--text);
+}
+.md-switch button.on {
+  background: var(--fill-3, rgba(255, 255, 255, 0.1));
+  color: var(--text);
+}
+
+.md-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 22px 30px 40px;
+  background: #050506;
+  color: #d7dce4;
+  font-size: 14px;
+  line-height: 1.65;
+  word-wrap: break-word;
+  user-select: text;
+}
+.md-preview > :first-child {
+  margin-top: 0;
+}
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  margin: 1.4em 0 0.6em;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #f2f3f5;
+  scroll-margin-top: 12px;
+}
+.md-preview h1 {
+  font-size: 1.9em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--line);
+}
+.md-preview h2 {
+  font-size: 1.45em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--line);
+}
+.md-preview h3 {
+  font-size: 1.2em;
+}
+.md-preview p,
+.md-preview ul,
+.md-preview ol,
+.md-preview blockquote,
+.md-preview table,
+.md-preview pre {
+  margin: 0 0 1em;
+}
+.md-preview a {
+  color: #39bfff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.md-preview a:hover {
+  text-decoration: underline;
+}
+.md-preview strong {
+  color: #f2f3f5;
+}
+.md-preview ul,
+.md-preview ol {
+  padding-left: 1.6em;
+}
+.md-preview li + li {
+  margin-top: 0.25em;
+}
+.md-preview li > input[type="checkbox"] {
+  margin: 0 0.4em 0 -1.3em;
+  vertical-align: middle;
+}
+.md-preview blockquote {
+  padding: 0.2em 1em;
+  border-left: 3px solid rgba(213, 182, 106, 0.55);
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.02);
+}
+.md-preview code {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+  font-size: 0.88em;
+}
+.md-preview pre {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0b0b0d;
+  overflow: auto;
+  line-height: 1.45;
+}
+.md-preview pre code {
+  padding: 0;
+  background: none;
+  font-size: 12.5px;
+  white-space: pre;
+}
+.md-preview table {
+  border-collapse: collapse;
+  display: block;
+  overflow: auto;
+  max-width: 100%;
+}
+.md-preview th,
+.md-preview td {
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+}
+.md-preview th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+}
+.md-preview tr:nth-child(2n) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+.md-preview hr {
+  height: 1px;
+  margin: 1.6em 0;
+  border: none;
+  background: var(--line-2);
+}
+.md-preview img {
+  max-width: 100%;
+  vertical-align: middle;
+}
+.md-preview img.md-img-loading {
+  min-width: 24px;
+  min-height: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.md-preview img.md-img-missing {
+  min-width: 80px;
+  min-height: 20px;
+  outline: 1px dashed var(--line-2);
+}
+.md-preview [align="center"] {
+  text-align: center;
+}

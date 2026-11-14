@@ -25,6 +25,7 @@ pub fn run() {
             project::project_current,
             fs_ops::fs_list_dir,
             fs_ops::fs_read_text,
+            fs_ops::fs_read_bytes,
             fs_ops::fs_stat_mtime,
             fs_ops::fs_write_text,
             fs_ops::fs_index,

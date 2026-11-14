@@ -2,9 +2,7 @@ import { useState } from "react";
 import { Icon } from "./Icons";
 import { DEFAULT_EXCLUDES, settingsStore } from "../state/settings";
 import { applyExcludes } from "../state/project";
-import { showTestGraph } from "../state/graph";
 import { uiStore } from "../state/ui";
-import { makeTestGraph } from "../graph/testGraph";
 
 export function ApplicationSettings() {
   const open = uiStore.use((s) => s.settingsOpen);
@@ -18,7 +16,8 @@ function SettingsDialog() {
   const showHidden = settingsStore.use((x) => x.showHidden);
   const autoGraph = settingsStore.use((x) => x.autoGraph);
   const ambient = settingsStore.use((x) => x.ambientMotion);
-  const [testSize, setTestSize] = useState(5000);
+  const autoSave = settingsStore.use((x) => x.autoSave);
+  const autoSaveDelay = settingsStore.use((x) => x.autoSaveDelay);
   const close = () => uiStore.set({ settingsOpen: false });
 
   const saveExcludes = () => {
@@ -55,25 +54,27 @@ function SettingsDialog() {
               value={ambient}
               onChange={(v) => settingsStore.set({ ambientMotion: v })}
             />
+          </section>
+
+          <section>
+            <h3>Editor</h3>
+            <Toggle
+              label="Salvar automaticamente"
+              hint="Grava o arquivo após um intervalo sem digitar e ao sair do editor (como “files.autoSave: afterDelay” do VS Code)."
+              value={autoSave}
+              onChange={(v) => settingsStore.set({ autoSave: v })}
+            />
             <div className="field-row">
-              <label>Grafo de teste</label>
+              <label>Intervalo (ms)</label>
               <input
                 type="number"
-                min={10}
-                max={200000}
-                step={1000}
-                value={testSize}
-                onChange={(e) => setTestSize(Number(e.target.value) || 0)}
+                min={200}
+                max={60000}
+                step={100}
+                value={autoSaveDelay}
+                disabled={!autoSave}
+                onChange={(e) => settingsStore.set({ autoSaveDelay: Math.min(Math.max(Number(e.target.value) || 1000, 200), 60000) })}
               />
-              <button
-                className="btn btn-sm"
-                onClick={() => {
-                  showTestGraph(makeTestGraph(Math.max(10, testSize)));
-                  close();
-                }}
-              >
-                Carregar
-              </button>
             </div>
           </section>
 

@@ -31,8 +31,6 @@ export function GraphViewport() {
 
 function GraphLegend() {
   const graph = graphStore.use((s) => s.graph)!;
-  const message = graphStore.use((s) => s.message);
-  const status = graphStore.use((s) => s.status);
   const communities = new Set(graph.nodes.map((n) => n.community)).size;
   return (
     <div className="graph-legend">
@@ -41,7 +39,6 @@ function GraphLegend() {
         <Figure value={graph.edges.length} label="arestas" />
         <Figure value={communities} label="comunidades" />
       </div>
-      {status === "test" && <div className="legend-note">{message}</div>}
     </div>
   );
 }

@@ -10,8 +10,8 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { uiStore, type FindMode } from "../state/ui";
-import { requestEditorSave, requestEditorClose } from "../state/editor";
-import { selectNode } from "../state/graph";
+import { requestEditorSave, requestEditorClose, toggleMarkdownPreview, toggleMarkdownSide } from "../state/editor";
+import { sceneApi, selectNode } from "../state/graph";
 import { pickAndOpenProject, projectStore } from "../state/project";
 import { focusTerminal, isInsideTerminal, sessionsStore, setPrimary, startSession } from "../state/sessions";
 import { loadJson, saveJson } from "./store";
@@ -134,12 +134,15 @@ export const KEYBINDINGS: Keybinding[] = [
   { id: "togglePanel", group: "Painéis", label: "Alternar painel (agente principal)", keys: ["ctrl+j"], skipShell: true, run: () => uiStore.set((s) => ({ bottomCollapsed: !s.bottomCollapsed, bottomExpanded: false })) },
   { id: "maximizePanel", group: "Painéis", label: "Maximizar painel", keys: [], run: () => uiStore.set((s) => ({ bottomCollapsed: false, bottomExpanded: !s.bottomExpanded })) },
   { id: "zen", group: "Painéis", label: "Modo zen (só o grafo)", keys: ["ctrl+k z"], run: toggleZen },
+  { id: "graphOverview", group: "Navegação", label: "Grafo: visão geral", keys: ["ctrl+e"], run: () => sceneApi()?.resetView() },
 
   { id: "toggleTerminal", group: "Terminal", label: "Alternar terminal", keys: ["ctrl+`", "ctrl+'"], skipShell: true, run: toggleTerminalPanel },
   { id: "newTerminal", group: "Terminal", label: "Novo terminal", keys: ["ctrl+shift+`"], skipShell: true, run: newTerminal },
 
   { id: "save", group: "Editor", label: "Salvar", keys: ["ctrl+s"], run: requestEditorSave },
   { id: "closeEditor", group: "Editor", label: "Fechar editor", keys: ["ctrl+w", "ctrl+f4"], run: requestEditorClose },
+  { id: "mdPreview", group: "Editor", label: "Markdown: alternar prévia", keys: ["ctrl+shift+v"], run: toggleMarkdownPreview },
+  { id: "mdPreviewSide", group: "Editor", label: "Markdown: abrir prévia ao lado", keys: ["ctrl+k v"], run: toggleMarkdownSide },
 
   { id: "fullscreen", group: "Janela", label: "Tela cheia", keys: ["f11"], skipShell: true, run: () => void toggleFullscreen() },
   { id: "zoomIn", group: "Janela", label: "Aumentar zoom", keys: ["ctrl+=", "ctrl+shift+=", "ctrl+numpadadd"], skipShell: true, run: () => setZoom(zoom + 0.1) },

@@ -85,6 +85,47 @@ pub fn fs_read_text(project: State<'_, ProjectState>, path: String) -> Result<Te
     }
 }
 
+/// Imagens maiores que isso não são carregadas no preview de Markdown.
+const MAX_IMAGE_BYTES: u64 = 10 * 1024 * 1024;
+/// Formatos aceitos por `fs_read_bytes` (apenas imagens do preview).
+const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"];
+
+/// Lê uma imagem do projeto e devolve o conteúdo em base64 (para data URI).
+#[tauri::command]
+pub fn fs_read_bytes(project: State<'_, ProjectState>, path: String) -> Result<String, String> {
+    let file = project.resolve_inside(&path)?;
+    let ext = file
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    if !IMAGE_EXTS.contains(&ext.as_str()) {
+        return Err("formato não suportado".into());
+    }
+    let meta = std::fs::metadata(&file).map_err(|e| e.to_string())?;
+    if meta.is_dir() {
+        return Err("é um diretório".into());
+    }
+    if meta.len() > MAX_IMAGE_BYTES {
+        return Err(format!("imagem grande demais ({} bytes)", meta.len()));
+    }
+    let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
+    Ok(base64_encode(&bytes))
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for chunk in data.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        out.push(T[(n >> 18) as usize & 63] as char);
+        out.push(T[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 2 { T[n as usize & 63] as char } else { '=' });
+    }
+    out
+}
+
 #[tauri::command]
 pub fn fs_stat_mtime(project: State<'_, ProjectState>, path: String) -> Result<u64, String> {
     let file = project.resolve_inside(&path)?;

@@ -16,12 +16,10 @@ import {
   runAnalysis,
   sceneApi,
   selectNode,
-  showTestGraph,
 } from "../state/graph";
 import { projectStore, revealInTree } from "../state/project";
 import { uiStore, type FindMode, type LocateResult } from "../state/ui";
 import { editorGoToLine, editorStore, openInEditor, parseLine, showEditor } from "../state/editor";
-import { makeTestGraph } from "../graph/testGraph";
 import { KEYBINDINGS, formatKeys } from "../lib/keybindings";
 
 interface FileItem {
@@ -65,10 +63,8 @@ const MAX_SYMBOLS = 8;
 function commands(): Omit<CommandItem, "score" | "positions">[] {
   const extra: Omit<CommandItem, "score" | "positions">[] = [
     { type: "command", id: "regen", label: "Regenerar grafo (Graphify)", run: () => void runAnalysis() },
-    { type: "command", id: "reset", label: "Grafo: visão geral", run: () => sceneApi()?.resetView() },
     { type: "command", id: "clear", label: "Grafo: limpar seleção", hint: "Esc", run: () => selectNode(null) },
     { type: "command", id: "editor", label: "Mostrar editor", run: showEditor },
-    { type: "command", id: "test", label: "Carregar grafo de teste (5.000 nós)", run: () => showTestGraph(makeTestGraph(5000)) },
   ];
   const fromBindings = KEYBINDINGS.filter((b) => b.id !== "commands").map((b) => ({
     type: "command" as const,

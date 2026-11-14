@@ -2,6 +2,8 @@
 import { createStore } from "../lib/store";
 
 export type EditorMode = "compact" | "expanded" | "maximized";
+/** Markdown: só o código, lado a lado com a prévia, ou só a prévia. */
+export type MarkdownView = "code" | "split" | "preview";
 
 interface EditorState {
   /** Arquivo pedido (caminho absoluto). O editor decide quando trocar. */
@@ -14,6 +16,7 @@ interface EditorState {
   dirty: boolean;
   visible: boolean;
   mode: EditorMode;
+  mdView: MarkdownView;
 }
 
 export const editorStore = createStore<EditorState>({
@@ -24,7 +27,24 @@ export const editorStore = createStore<EditorState>({
   dirty: false,
   visible: false,
   mode: "compact",
+  mdView: "code",
 });
+
+export const isMarkdown = (path: string | null) => !!path && /\.(md|markdown|mdx)$/i.test(path);
+
+/** Ctrl+Shift+V: alterna entre o código e a prévia (como no VS Code). */
+export function toggleMarkdownPreview() {
+  const s = editorStore.get();
+  if (!isMarkdown(s.openPath)) return;
+  editorStore.set({ mdView: s.mdView === "preview" ? "code" : "preview", visible: true });
+}
+
+/** Ctrl+K V: abre a prévia ao lado do código. */
+export function toggleMarkdownSide() {
+  const s = editorStore.get();
+  if (!isMarkdown(s.openPath)) return;
+  editorStore.set({ mdView: s.mdView === "split" ? "code" : "split", visible: true });
+}
 
 export function openInEditor(absPath: string, line: number | null = null) {
   editorStore.set((s) => ({

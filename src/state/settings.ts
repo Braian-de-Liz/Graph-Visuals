@@ -14,6 +14,9 @@ export interface Settings {
   launchDock: "primary" | "leftTop" | "leftBottom" | "rightTop" | "rightBottom";
   /** Agentes adicionados pelo usuário, informando o caminho do executável. */
   customAgents: CustomAgent[];
+  /** Salvar o editor automaticamente após `autoSaveDelay` ms sem digitar. */
+  autoSave: boolean;
+  autoSaveDelay: number;
 }
 
 export interface CustomAgent {
@@ -35,6 +38,8 @@ export const settingsStore = createStore<Settings>({
   ambientMotion: false,
   recentProjects: [],
   launchDock: "primary",
+  autoSave: true,
+  autoSaveDelay: 1000,
   customAgents: [],
   ...loadJson<Partial<Settings>>(KEY, {}),
 });

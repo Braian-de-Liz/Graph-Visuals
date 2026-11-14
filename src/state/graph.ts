@@ -7,7 +7,7 @@ import { baseName, pathKey } from "../lib/paths";
 import type { GraphData } from "../graph/types";
 import { settingsStore } from "./settings";
 
-export type GraphStatus = "none" | "loading" | "analyzing" | "synced" | "outdated" | "error" | "test";
+export type GraphStatus = "none" | "loading" | "analyzing" | "synced" | "outdated" | "error";
 
 interface GraphState {
   graph: GraphData | null;
@@ -130,13 +130,6 @@ export function resetForProject() {
   setGraph(null, "loading", "Carregando grafo…");
 }
 
-/** Grafo sintético para testes de desempenho. Descarta análises em andamento. */
-export function showTestGraph(g: GraphData) {
-  projectSeq++;
-  clearTimeout(debounceTimer);
-  setGraph(g, "test", `Grafo de teste · ${g.nodes.length.toLocaleString("pt-BR")} nós`);
-}
-
 /** Carrega o último grafo válido em cache e agenda uma análise. */
 export async function loadForProject() {
   const seq = projectSeq;
@@ -192,7 +185,6 @@ export async function runAnalysis() {
 
 /** Chamado pelo File Watcher. Aplica debounce antes de reanalisar. */
 export function scheduleUpdate() {
-  if (graphStore.get().status === "test") return;
   if (running) {
     dirtyWhileRunning = true;
     return;
