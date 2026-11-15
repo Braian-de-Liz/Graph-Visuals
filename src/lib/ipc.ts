@@ -74,6 +74,39 @@ export const onFsChanged = (cb: (e: FsChanged) => void): Promise<UnlistenFn> =>
 export const graphifyRun = () => invoke<GraphRunResult>("graphify_run");
 export const graphLoad = () => invoke<GraphData | null>("graph_load");
 
+/** M modificado, A adicionado, D excluído, R renomeado, U não rastreado, C conflito. */
+export type GitStatusCode = "M" | "A" | "D" | "R" | "U" | "C";
+
+export interface GitChange {
+  /** Caminho relativo ao projeto, com `/`. */
+  rel: string;
+  status: GitStatusCode;
+  staged: boolean;
+}
+
+export interface GitStatus {
+  isRepo: boolean;
+  branch: string;
+  detached: string | null;
+  upstream: string | null;
+  ahead: number;
+  behind: number;
+  changes: GitChange[];
+}
+
+export interface GitBranch {
+  name: string;
+  remote: boolean;
+  current: boolean;
+  upstream: string | null;
+}
+
+export const gitStatus = () => invoke<GitStatus>("git_status");
+export const gitBranches = () => invoke<GitBranch[]>("git_branches");
+export const gitCheckout = (name: string) => invoke<void>("git_checkout", { name });
+export const gitCreateBranch = (name: string) => invoke<void>("git_create_branch", { name });
+export const onGitChanged = (cb: () => void): Promise<UnlistenFn> => listen("git://changed", () => cb());
+
 export const agentsDetect = () => invoke<AgentInfo[]>("agents_detect");
 /** Caminho resolvido de um executável escolhido pelo usuário, ou null. */
 export const agentResolve = (command: string) => invoke<string | null>("agent_resolve", { command });

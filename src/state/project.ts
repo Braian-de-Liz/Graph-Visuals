@@ -9,6 +9,8 @@ import { loadForProject, resetForProject, scheduleUpdate } from "./graph";
 import { toast } from "./ui";
 import { clearActivity, recordActivity } from "./activity";
 import { sessionsStore } from "./sessions";
+import { resolveDirtyTabs } from "./editor";
+import { ask, askAboutDirty } from "./dialog";
 
 function hasRunningSessionIn(root: string): boolean {
   return sessionsStore
@@ -55,7 +57,38 @@ async function refreshIndex() {
   }
 }
 
+/**
+ * Antes de trocar de projeto: resolve arquivos não salvos e avisa sobre
+ * sessões de agente em execução no projeto atual (elas não são encerradas).
+ */
+async function confirmLeaveProject(): Promise<boolean> {
+  const { root, name } = projectStore.get();
+  if (!root) return true;
+  const running = sessionsStore
+    .get()
+    .sessions.filter((s) => s.state === "running" && !!s.cwd && toRel(root, s.cwd) !== null);
+  const note = running.length
+    ? `${running.length === 1 ? "1 sessão de agente continua" : `${running.length} sessões de agente continuam`} em execução em ${name}.`
+    : undefined;
+  let asked = false;
+  const ok = await resolveDirtyTabs((dirty) => {
+    asked = true;
+    return askAboutDirty(dirty, "Trocar de projeto?", note);
+  });
+  if (!ok) return false;
+  if (asked || !running.length) return true;
+  const c = await ask({
+    title: "Trocar de projeto?",
+    body: `Estas sessões continuam em execução em ${name}. Elas não serão encerradas e seguem acessíveis na lista de agentes.`,
+    items: running.map((s) => `${s.agentName} · ${s.title}`),
+    actions: [{ id: "go", label: "Trocar de projeto", tone: "primary" }],
+  });
+  return c === "go";
+}
+
 export async function openProject(path: string, opts: { quiet?: boolean } = {}) {
+  const current = projectStore.get().root;
+  if (current && pathKey(current) !== pathKey(path) && !(await confirmLeaveProject())) return;
   try {
     const root = await projectOpen(path);
     projectStore.set({
@@ -133,6 +166,12 @@ window.setInterval(() => {
     void refreshIndex();
   }
 }, 60_000);
+
+/** Relê a árvore e o índice de pesquisa (botão "Atualizar" do explorador). */
+export function refreshProject() {
+  projectStore.set((s) => ({ treeToken: s.treeToken + 1 }));
+  void refreshIndex();
+}
 
 export function toggleExpanded(absPath: string) {
   const key = pathKey(absPath);

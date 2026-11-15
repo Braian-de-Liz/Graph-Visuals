@@ -378,7 +378,7 @@ export function LocateConfirm() {
     if (!root) return;
     if (loc.kind === "dir") {
       revealInTree(loc.rel);
-      uiStore.set({ rightOpen: true, locate: null });
+      uiStore.set({ rightOpen: true, rightHidden: false, locate: null });
     } else {
       openInEditor(joinRel(root, loc.rel), loc.line);
       uiStore.set({ locate: null });

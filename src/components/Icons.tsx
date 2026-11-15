@@ -7,7 +7,7 @@ type IconName =
   | "search" | "settings" | "minimize" | "maximize" | "close" | "plus" | "stop" | "star"
   | "expand" | "collapse" | "chevronRight" | "chevronDown" | "target" | "home" | "x"
   | "refresh" | "orbit" | "folder" | "folderOpen" | "file" | "code" | "save" | "panelLeft"
-  | "panelRight" | "terminal" | "send" | "layers" | "trash" | "eye" | "dot" | "restore" | "compact";
+  | "panelRight" | "terminal" | "send" | "layers" | "trash" | "eye" | "dot" | "restore" | "compact" | "branch" | "check" | "bell" | "fileAdd" | "folderAdd" | "copy";
 
 const PATHS: Record<IconName, string> = {
   search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.2-4.2",
@@ -43,6 +43,12 @@ const PATHS: Record<IconName, string> = {
   trash: "M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13",
   eye: "M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",
   dot: "M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z",
+  branch: "M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9",
+  check: "M5 12.5l4.5 4.5L19 7.5",
+  bell: "M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0",
+  fileAdd: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 11v6M9 14h6",
+  folderAdd: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10.5v5M9.5 13h5",
+  copy: "M9 9h10v11H9zM5 15V4h10",
 };
 
 export function Icon({ name, size = 16, ...rest }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {

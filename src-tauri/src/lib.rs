@@ -7,6 +7,7 @@
 mod agents;
 mod fs_edit;
 mod fs_ops;
+mod git;
 mod graph;
 mod project;
 mod pty;
@@ -33,6 +34,10 @@ pub fn run() {
             fs_edit::fs_rename,
             fs_edit::fs_delete,
             fs_edit::reveal_in_os,
+            git::git_status,
+            git::git_branches,
+            git::git_checkout,
+            git::git_create_branch,
             watcher::watch_start,
             watcher::watch_stop,
             graph::graphify_run,

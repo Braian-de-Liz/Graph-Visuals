@@ -13,8 +13,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import { createStore, type Store } from "../lib/store";
 import { agentResolve, agentsDetect, ptyKill, ptyResize, ptySpawn, ptyWrite, type AgentInfo } from "../lib/ipc";
 import { baseName } from "../lib/paths";
-import { uiStore } from "./ui";
+import { toast, uiStore } from "./ui";
 import { settingsStore } from "./settings";
+import { ask } from "./dialog";
 
 export type SessionState = "starting" | "running" | "exited" | "error";
 
@@ -28,6 +29,15 @@ const DOCK_KEY = {
   rightBottom: "rightBottomId",
 } as const;
 const DOCKS = Object.keys(DOCK_KEY) as Dock[];
+
+/** Ordem de exibição no seletor: da esquerda para a direita da tela. */
+export const DOCK_LABEL: Record<Dock, string> = {
+  leftTop: "Esquerda · em cima",
+  leftBottom: "Esquerda · embaixo",
+  primary: "Painel inferior",
+  rightTop: "Direita · em cima",
+  rightBottom: "Direita · embaixo",
+};
 
 export interface SessionMeta {
   id: string;
@@ -58,6 +68,8 @@ interface SessionsState {
   viewedId: string | null;
   /** Formulário "Adicionar agente" aberto no lugar do painel do agente. */
   addingAgent: boolean;
+  /** Sessão com o título em edição. */
+  renamingId: string | null;
 }
 
 const INITIAL: SessionsState = {
@@ -72,6 +84,7 @@ const INITIAL: SessionsState = {
   rightBottomId: null,
   viewedId: null,
   addingAgent: false,
+  renamingId: null,
 };
 
 interface Runtime {
@@ -318,6 +331,29 @@ export function stopSession(id: string) {
   if (rt && rt.ptyId !== null && rt.alive) void ptyKill(rt.ptyId);
 }
 
+/** Botão "Encerrar processo": confirma antes; Shift+clique encerra direto. */
+export async function requestStop(id: string, skipConfirm = false) {
+  const s = sessionsStore.get().sessions.find((x) => x.id === id);
+  if (!s) return;
+  if (!skipConfirm) {
+    const c = await ask({
+      title: `Encerrar ${s.agentName}?`,
+      body: `O processo de “${s.title}” será finalizado. A saída continua visível no terminal. Dica: Shift+clique encerra sem perguntar.`,
+      actions: [{ id: "stop", label: "Encerrar processo", tone: "danger" }],
+    });
+    if (c !== "stop") return;
+  }
+  stopSession(id);
+}
+
+export const startRenameSession = (id: string) => sessionsStore.set({ renamingId: id });
+
+export function renameSession(id: string, title: string) {
+  const t = title.trim();
+  sessionsStore.set({ renamingId: null });
+  if (t) patchSession(id, { title: t });
+}
+
 export function setPrimary(id: string | null) {
   placeSession(id, "primary");
 }
@@ -333,9 +369,14 @@ export const sessionAt = (dock: Dock, s = sessionsStore.get()) => s[DOCK_KEY[doc
 /**
  * Coloca a sessão em `dock` (null esvazia a posição). Uma sessão ocupa uma
  * posição por vez; se o destino estiver ocupado e a sessão vier de outra
- * posição, as duas trocam de lugar. Nenhum processo é reiniciado.
+ * posição, as duas trocam de lugar; se vier de fora dos painéis, a ocupante
+ * sai da tela (com aviso) e continua ativa. Nenhum processo é reiniciado.
  */
 export function placeSession(id: string | null, dock: Dock) {
+  const before = sessionsStore.get();
+  const moved = id !== null && dockOf(id, before) !== dock;
+  const occupantId = before[DOCK_KEY[dock]];
+  const evicted = moved && occupantId && occupantId !== id && !dockOf(id, before) ? before.sessions.find((x) => x.id === occupantId) : null;
   sessionsStore.set((s) => {
     const next: Partial<SessionsState> = {};
     const occupant = s[DOCK_KEY[dock]];
@@ -350,15 +391,43 @@ export function placeSession(id: string | null, dock: Dock) {
     if (s.viewedId === id) next.viewedId = null;
     return next;
   });
-  if (id && dock === "primary") uiStore.set({ bottomCollapsed: false });
+  if (!id) return;
+  if (dock === "primary") uiStore.set({ bottomCollapsed: false });
+  // Os andares da esquerda só existem com a lateral visível.
+  else if ((dock === "leftTop" || dock === "leftBottom") && uiStore.get().left === "hidden") uiStore.set({ left: "rail" });
+  else if ((dock === "rightTop" || dock === "rightBottom") && uiStore.get().rightHidden) uiStore.set({ rightHidden: false });
+  if (evicted) toast(`“${evicted.title}” saiu do painel e continua ativa na lista de agentes.`);
+  // Mover o elemento do terminal no DOM tira o foco dele.
+  if (moved) setTimeout(() => focusTerminal(id), 60);
 }
 
-/** Inicia uma sessão e a coloca na posição escolhida (padrão: a última usada). */
+/**
+ * Inicia uma sessão e a coloca na posição escolhida (padrão: a última usada).
+ * Se a posição estiver ocupada, usa a primeira livre em vez de tirar a outra
+ * sessão da tela.
+ */
 export function launchSession(agent: AgentInfo, cwd: string | null, dock: Dock = settingsStore.get().launchDock): string {
+  const s = sessionsStore.get();
+  const target = s[DOCK_KEY[dock]] ? (DOCKS.find((d) => !s[DOCK_KEY[d]]) ?? dock) : dock;
   const id = startSession(agent, cwd);
-  placeSession(id, dock);
+  placeSession(id, target);
+  if (target !== dock) toast(`${DOCK_LABEL[dock]} está em uso: sessão aberta em ${DOCK_LABEL[target]}.`);
   setTimeout(() => focusTerminal(id), 150);
   return id;
+}
+
+/**
+ * Ctrl+L: oculta ou mostra a lateral direita inteira (explorador e agentes).
+ * Ao mostrar uma lateral sem agentes, abre o explorador.
+ */
+export function toggleRightSide() {
+  const { rightTopId, rightBottomId } = sessionsStore.get();
+  const hasAgents = !!(rightTopId || rightBottomId);
+  uiStore.set((s) => {
+    const visible = !s.rightHidden && (s.rightOpen || hasAgents);
+    if (visible) return hasAgents ? { rightHidden: true } : { rightOpen: false };
+    return { rightHidden: false, rightOpen: s.rightOpen || !hasAgents };
+  });
 }
 
 // ---------- montagem do DOM do terminal ----------

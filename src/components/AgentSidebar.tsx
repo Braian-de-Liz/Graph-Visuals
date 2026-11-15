@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AgentGlyph, Icon } from "./Icons";
-import { StateChip, TerminalHost } from "./AgentSessionView";
+import { SessionTitle, StateChip, StopButton, TerminalHost, sessionMenu } from "./AgentSessionView";
+import { openContextMenu } from "./ContextMenu";
 import {
   closeSession,
   detectAgents,
@@ -10,7 +11,6 @@ import {
   removeCustomAgent,
   sessionsStore,
   setPrimary,
-  stopSession,
   type Dock,
   type SessionMeta,
 } from "../state/sessions";
@@ -25,6 +25,7 @@ import type { AgentInfo } from "../lib/ipc";
 /** Lateral esquerda: descobrir, iniciar e alternar sessões dos CLIs originais. */
 export function AgentSidebar() {
   const mode = uiStore.use((s) => s.left);
+  const railHidden = uiStore.use((s) => s.railHidden);
   const loaded = sessionsStore.use((s) => s.agentsLoaded);
   const leftTop = sessionsStore.use((s) => s.leftTopId);
   const leftBottom = sessionsStore.use((s) => s.leftBottomId);
@@ -32,13 +33,15 @@ export function AgentSidebar() {
     if (!loaded) void detectAgents();
   }, [loaded]);
   if (mode === "hidden") return null;
-  const column = mode === "expanded" || !!leftTop || !!leftBottom;
+  // Com os dois andares ocupados, o painel do agente não entra entre eles.
+  const panel = mode === "expanded" && !(leftTop && leftBottom);
+  const column = panel || !!leftTop || !!leftBottom;
   return (
     <div className={`agent-sidebar ${mode} ${column ? "with-column" : ""}`}>
-      <AgentList />
+      {!railHidden && <AgentList />}
       {column && (
         <div className="left-column">
-          <SideDock side="left" middle={mode === "expanded" ? <AgentPanel /> : null} />
+          <SideDock side="left" middle={panel ? <AgentPanel /> : null} />
         </div>
       )}
     </div>
@@ -181,7 +184,7 @@ function AgentPanel() {
         ) : (
           <div className="panel-empty">
             {mine.some((s) => dockOf(s.id, state))
-              ? "As sessões deste agente estão abertas no painel inferior ou na lateral direita."
+              ? "As sessões deste agente estão abertas no painel inferior ou nas laterais."
               : "Selecione uma sessão para interagir aqui."}
           </div>
         )}
@@ -202,18 +205,17 @@ function SessionRow({ s, dock, viewed }: { s: SessionMeta; dock: Dock | null; vi
       onPointerDown={(e) => beginSessionDrag(e, s)}
       onClick={() => !dock && sessionsStore.set({ viewedId: s.id })}
       onDoubleClick={() => setPrimary(s.id)}
+      onContextMenu={(e) => openContextMenu(e, sessionMenu(s))}
     >
       <span className={`pulse ${s.state}`} />
       <div className="session-meta">
-        <span className="session-title">{s.title}</span>
+        <SessionTitle session={s} className="session-title" />
         <StateChip state={s.state} code={s.exitCode} />
       </div>
       <div className="session-actions" onClick={(e) => e.stopPropagation()}>
         <DockPicker value={dock} onPick={(d) => placeSession(dock === d ? null : s.id, d)} label="Posição" />
         {alive ? (
-          <button className="icon-btn" title="Encerrar processo" onClick={() => stopSession(s.id)}>
-            <Icon name="stop" />
-          </button>
+          <StopButton id={s.id} />
         ) : (
           <button className="icon-btn danger" title="Fechar sessão" onClick={() => closeSession(s.id)}>
             <Icon name="trash" />

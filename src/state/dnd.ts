@@ -40,7 +40,9 @@ function floorRect(side: "left" | "right", which: "top" | "bottom", ws: DOMRect,
   };
   const top = side === "left" ? at("leftTop") : at("rightTop");
   const bottom = side === "left" ? at("leftBottom") : at("rightBottom");
-  const middle = side === "left" ? ui.left === "expanded" : ui.rightOpen;
+  // À esquerda, o painel do agente sai quando os dois andares ficam ocupados.
+  const both = !!(top || which === "top") && !!(bottom || which === "bottom");
+  const middle = side === "left" ? ui.left === "expanded" && !both : ui.rightOpen;
   const weights = side === "left" ? ui.leftWeights : ui.rightWeights;
   const sections: ("top" | "files" | "bottom")[] = [];
   if (top || which === "top") sections.push("top");
@@ -68,7 +70,7 @@ function computeZones(dragId: string): DropZone[] {
   const ui = uiStore.get();
   const leftW = Math.max(ui.leftWidth, AGENT_MIN_W);
   const rightW = Math.max(ui.rightWidth, AGENT_MIN_W);
-  const lx = ws.left + RAIL;
+  const lx = ws.left + (ui.railHidden ? 0 : RAIL);
   const rx = ws.right - rightW;
   const zones: DropZone[] = [
     { dock: "leftTop", ...floorRect("left", "top", ws, lx, leftW, dragId) },

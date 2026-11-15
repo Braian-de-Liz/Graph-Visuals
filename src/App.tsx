@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TopNavigation } from "./components/TopNavigation";
 import { AgentSidebar } from "./components/AgentSidebar";
 import { GraphViewport } from "./components/GraphViewport";
@@ -13,14 +13,18 @@ import { FloatingCodeEditor } from "./components/FloatingCodeEditor";
 import { ApplicationSettings } from "./components/ApplicationSettings";
 import { Splitter } from "./components/Splitter";
 import { Icon } from "./components/Icons";
-import { uiStore } from "./state/ui";
+import { dismissToast, uiStore } from "./state/ui";
 import { editorStore, showEditor } from "./state/editor";
 import { baseName } from "./lib/paths";
 import { installKeybindings, restoreZoom } from "./lib/keybindings";
 import { restoreLastProject } from "./state/project";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { ConfirmDialog } from "./components/ConfirmDialog";
+import { installCloseGuard } from "./state/lifecycle";
 
 const RAIL = 68;
+/** Largura mínima reservada à região central (grafo e painel inferior). */
+const CENTER_MIN = 440;
 
 /** ApplicationShell: barra superior, laterais, região central e camadas flutuantes. */
 export default function App() {
@@ -28,6 +32,8 @@ export default function App() {
   const leftWidth = uiStore.use((s) => s.leftWidth);
   const rightOpen = uiStore.use((s) => s.rightOpen);
   const rightWidth = uiStore.use((s) => s.rightWidth);
+  const rightHidden = uiStore.use((s) => s.rightHidden);
+  const railHidden = uiStore.use((s) => s.railHidden);
   const bottomHeight = uiStore.use((s) => s.bottomHeight);
   const bottomCollapsed = uiStore.use((s) => s.bottomCollapsed);
   const bottomExpanded = uiStore.use((s) => s.bottomExpanded);
@@ -37,16 +43,38 @@ export default function App() {
   const leftBottomId = sessionsStore.use((s) => s.leftBottomId);
   const centerRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef(0);
+  const [winWidth, setWinWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const onResize = () => setWinWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     restoreZoom();
     restoreLastProject();
-    return installKeybindings();
+    const unKeys = installKeybindings();
+    const unClose = installCloseGuard();
+    return () => {
+      unKeys();
+      unClose();
+    };
   }, []);
 
   const leftColumn = left === "expanded" || !!leftTopId || !!leftBottomId;
-  const leftW = left === "hidden" ? 0 : leftColumn ? RAIL + leftWidth : RAIL;
-  const rightW = rightOpen || rightTopId || rightBottomId ? rightWidth : 0;
+  const rail = left === "hidden" || railHidden ? 0 : RAIL;
+  // As laterais cedem largura em janelas estreitas para a região central não
+  // sumir. As larguras salvas não mudam: voltam ao alargar a janela.
+  const room = Math.max(winWidth - rail - CENTER_MIN, 0);
+  let colW = left !== "hidden" && leftColumn ? leftWidth : 0;
+  let rightW = !rightHidden && (rightOpen || rightTopId || rightBottomId) ? rightWidth : 0;
+  if (colW + rightW > room) {
+    const k = room / (colW + rightW);
+    colW = Math.floor(colW * k);
+    rightW = Math.floor(rightW * k);
+  }
+  const leftW = rail + colW;
   const bottom = bottomCollapsed ? "40px" : bottomExpanded ? "72%" : `${bottomHeight}px`;
 
   return (
@@ -63,8 +91,8 @@ export default function App() {
             <Splitter
               axis="x"
               className="edge-right"
-              onStart={() => (dragStart.current = leftWidth)}
-              onDrag={(d) => uiStore.set({ leftWidth: clamp(dragStart.current + d, 280, 900) })}
+              onStart={() => (dragStart.current = colW)}
+              onDrag={(d) => uiStore.set({ leftWidth: clamp(dragStart.current + d, 280, Math.min(900, room - rightW)) })}
             />
           )}
         </div>
@@ -91,11 +119,11 @@ export default function App() {
             <Splitter
               axis="x"
               className="edge-left"
-              onStart={() => (dragStart.current = rightWidth)}
-              onDrag={(d) => uiStore.set({ rightWidth: clamp(dragStart.current - d, 220, 900) })}
+              onStart={() => (dragStart.current = rightW)}
+              onDrag={(d) => uiStore.set({ rightWidth: clamp(dragStart.current - d, 220, Math.min(900, room - colW)) })}
             />
           )}
-          <RightDock />
+          {!rightHidden && <RightDock />}
         </div>
 
         <FloatingCodeEditor />
@@ -107,6 +135,7 @@ export default function App() {
       <DropOverlay />
       <ContextMenu />
       <DeleteConfirm />
+      <ConfirmDialog />
       <ChordHint />
       <Toast />
     </div>
@@ -138,11 +167,18 @@ function EditorPill() {
 }
 
 function Toast() {
-  const toast = uiStore.use((s) => s.toast);
-  if (!toast) return null;
+  const toasts = uiStore.use((s) => s.toasts);
+  if (!toasts.length) return null;
   return (
-    <div key={toast.id} className={`toast glass-strong ${toast.tone}`}>
-      {toast.text}
+    <div className="toast-stack" role="status" aria-live="polite">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast glass-strong ${t.tone}`}>
+          <span>{t.text}</span>
+          <button className="toast-close" title="Dispensar" aria-label="Dispensar aviso" onClick={() => dismissToast(t.id)}>
+            <Icon name="close" size={12} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

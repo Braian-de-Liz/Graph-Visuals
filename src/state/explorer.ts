@@ -5,7 +5,7 @@ import { createStore } from "../lib/store";
 import { fsCreate, fsDelete, fsRename, revealInOs } from "../lib/ipc";
 import { baseName, pathKey, toRel } from "../lib/paths";
 import { projectStore } from "./project";
-import { editorStore, openInEditor } from "./editor";
+import { editorRenamed, openInEditor } from "./editor";
 import { launchSession, sessionsStore } from "./sessions";
 import { representativeNode, sceneApi, selectNode } from "./graph";
 import { toast } from "./ui";
@@ -58,9 +58,8 @@ export async function commitEdit(name: string): Promise<boolean> {
         return true;
       }
       const next = await fsRename(edit.target, name);
-      // Arquivo aberto no editor (sem alterações pendentes) acompanha o novo nome.
-      const open = editorStore.get().openPath;
-      if (open && !editorStore.get().dirty && pathKey(open) === pathKey(edit.target)) openInEditor(next);
+      // Abas abertas no editor acompanham o novo nome (sem perder edições).
+      editorRenamed(edit.target, next);
     } else {
       const created = await fsCreate(edit.dir, name, edit.kind === "newFolder");
       if (edit.kind === "newFile") openInEditor(created);

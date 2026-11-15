@@ -1,6 +1,7 @@
 import { AgentGlyph, Icon } from "./Icons";
-import { SessionInput, StateChip, TerminalHost } from "./AgentSessionView";
-import { closeSession, launchSession, placeSession, sessionsStore, setPrimary, stopSession } from "../state/sessions";
+import { SessionInput, SessionTitle, StateChip, StopButton, TerminalHost, sessionMenu } from "./AgentSessionView";
+import { openContextMenu } from "./ContextMenu";
+import { closeSession, launchSession, placeSession, sessionsStore, setPrimary } from "../state/sessions";
 import { projectStore } from "../state/project";
 import { uiStore } from "../state/ui";
 import { settingsStore } from "../state/settings";
@@ -26,12 +27,13 @@ export function PrimaryAgentWorkspace() {
         className={`primary-head ${session ? "has-session" : ""}`}
         onDoubleClick={toggleCollapse}
         onPointerDown={(e) => session && beginSessionDrag(e, session)}
+        onContextMenu={(e) => session && openContextMenu(e, sessionMenu(session))}
       >
         {session ? (
           <>
             <AgentGlyph id={session.agentId} size={24} />
             <strong className="primary-agent">{session.agentName}</strong>
-            <span className="primary-session">{session.title}</span>
+            <SessionTitle session={session} className="primary-session" />
             <StateChip state={session.state} code={session.exitCode} />
             <span className="primary-cwd" title={session.cwd ?? ""}>
               {session.cwd}
@@ -63,9 +65,7 @@ export function PrimaryAgentWorkspace() {
           <>
             <DockPicker value="primary" onPick={(d) => placeSession(session.id, d)} label="Mover para" />
             {session.state === "running" || session.state === "starting" ? (
-              <button className="icon-btn" title="Encerrar processo" onClick={() => stopSession(session.id)}>
-                <Icon name="stop" />
-              </button>
+              <StopButton id={session.id} />
             ) : (
               <button className="icon-btn danger" title="Fechar sessão" onClick={() => closeSession(session.id)}>
                 <Icon name="trash" />

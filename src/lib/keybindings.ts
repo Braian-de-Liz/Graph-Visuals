@@ -9,11 +9,11 @@
 // Ctrl+G, Ctrl+O…) ficam com o terminal, para não quebrar atalhos do shell.
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { uiStore, type FindMode } from "../state/ui";
-import { requestEditorSave, requestEditorClose, toggleMarkdownPreview, toggleMarkdownSide } from "../state/editor";
+import { openExplorer, uiStore, type FindMode } from "../state/ui";
+import { cycleEditorTab, requestEditorSave, requestEditorClose, toggleMarkdownPreview, toggleMarkdownSide } from "../state/editor";
 import { sceneApi, selectNode } from "../state/graph";
 import { pickAndOpenProject, projectStore } from "../state/project";
-import { focusTerminal, isInsideTerminal, sessionsStore, setPrimary, startSession } from "../state/sessions";
+import { focusTerminal, isInsideTerminal, launchSession, sessionsStore, toggleRightSide } from "../state/sessions";
 import { loadJson, saveJson } from "./store";
 
 export interface Keybinding {
@@ -77,21 +77,19 @@ function newTerminal() {
   const shells = sessionsStore.get().agents.filter((a) => a.kind === "shell" && a.path);
   const shell = shells[0];
   if (!shell) return;
-  const id = startSession(shell, projectStore.get().root);
-  setPrimary(id);
-  uiStore.set({ bottomCollapsed: false });
-  setTimeout(() => focusTerminal(id), 120);
+  // Painel inferior; se ele estiver em uso, a primeira posição livre.
+  launchSession(shell, projectStore.get().root, "primary");
 }
 
-let zenSnapshot: { left: ReturnType<typeof uiStore.get>["left"]; rightOpen: boolean; bottomCollapsed: boolean } | null = null;
+let zenSnapshot: { left: ReturnType<typeof uiStore.get>["left"]; rightOpen: boolean; rightHidden: boolean; bottomCollapsed: boolean } | null = null;
 function toggleZen() {
   if (zenSnapshot) {
     uiStore.set(zenSnapshot);
     zenSnapshot = null;
   } else {
     const s = uiStore.get();
-    zenSnapshot = { left: s.left, rightOpen: s.rightOpen, bottomCollapsed: s.bottomCollapsed };
-    uiStore.set({ left: "hidden", rightOpen: false, bottomCollapsed: true, bottomExpanded: false });
+    zenSnapshot = { left: s.left, rightOpen: s.rightOpen, rightHidden: s.rightHidden, bottomCollapsed: s.bottomCollapsed };
+    uiStore.set({ left: "hidden", rightOpen: false, rightHidden: true, bottomCollapsed: true, bottomExpanded: false });
   }
 }
 
@@ -112,7 +110,7 @@ async function toggleFullscreen() {
 }
 
 function showExplorer() {
-  uiStore.set({ rightOpen: true });
+  openExplorer();
   requestAnimationFrame(() => document.querySelector<HTMLInputElement>(".explorer-search input")?.focus());
 }
 
@@ -129,7 +127,8 @@ export const KEYBINDINGS: Keybinding[] = [
   { id: "shortcuts", group: "Geral", label: "Atalhos de teclado", keys: ["ctrl+k ctrl+s"], run: () => uiStore.set({ shortcutsOpen: true }) },
 
   { id: "toggleSidebar", group: "Painéis", label: "Alternar barra lateral (agentes)", keys: ["ctrl+b"], skipShell: true, run: () => uiStore.set((s) => ({ left: s.left === "hidden" ? "rail" : "hidden" })) },
-  { id: "toggleAuxBar", group: "Painéis", label: "Alternar explorador de arquivos (direita)", keys: ["ctrl+l", "ctrl+alt+b"], skipShell: true, run: () => uiStore.set((s) => ({ rightOpen: !s.rightOpen })) },
+  { id: "toggleAgentRail", group: "Painéis", label: "Alternar trilho de agentes", keys: ["ctrl+n"], skipShell: true, run: () => uiStore.set((s) => ({ railHidden: !s.railHidden })) },
+  { id: "toggleAuxBar", group: "Painéis", label: "Alternar lateral direita (explorador e agentes)", keys: ["ctrl+l", "ctrl+alt+b"], skipShell: true, run: toggleRightSide },
   { id: "showExplorer", group: "Painéis", label: "Mostrar explorador", keys: ["ctrl+shift+e"], skipShell: true, run: showExplorer },
   { id: "togglePanel", group: "Painéis", label: "Alternar painel (agente principal)", keys: ["ctrl+j"], skipShell: true, run: () => uiStore.set((s) => ({ bottomCollapsed: !s.bottomCollapsed, bottomExpanded: false })) },
   { id: "maximizePanel", group: "Painéis", label: "Maximizar painel", keys: [], run: () => uiStore.set((s) => ({ bottomCollapsed: false, bottomExpanded: !s.bottomExpanded })) },
@@ -140,7 +139,9 @@ export const KEYBINDINGS: Keybinding[] = [
   { id: "newTerminal", group: "Terminal", label: "Novo terminal", keys: ["ctrl+shift+`"], skipShell: true, run: newTerminal },
 
   { id: "save", group: "Editor", label: "Salvar", keys: ["ctrl+s"], run: requestEditorSave },
-  { id: "closeEditor", group: "Editor", label: "Fechar editor", keys: ["ctrl+w", "ctrl+f4"], run: requestEditorClose },
+  { id: "closeEditor", group: "Editor", label: "Fechar arquivo", keys: ["ctrl+w", "ctrl+f4"], run: requestEditorClose },
+  { id: "nextTab", group: "Editor", label: "Próxima aba", keys: ["ctrl+tab", "ctrl+pagedown"], run: () => cycleEditorTab(1) },
+  { id: "prevTab", group: "Editor", label: "Aba anterior", keys: ["ctrl+shift+tab", "ctrl+pageup"], run: () => cycleEditorTab(-1) },
   { id: "mdPreview", group: "Editor", label: "Markdown: alternar prévia", keys: ["ctrl+shift+v"], run: toggleMarkdownPreview },
   { id: "mdPreviewSide", group: "Editor", label: "Markdown: abrir prévia ao lado", keys: ["ctrl+k v"], run: toggleMarkdownSide },
 
@@ -197,6 +198,8 @@ function strokeOf(e: KeyboardEvent): string | null {
       Escape: "escape",
       Enter: "enter",
       Tab: "tab",
+      PageUp: "pageup",
+      PageDown: "pagedown",
     };
     k = map[c] ?? "";
   }

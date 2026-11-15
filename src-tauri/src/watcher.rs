@@ -36,6 +36,13 @@ fn is_excluded(path: &Path, root: &Path, excludes: &[String]) -> bool {
     })
 }
 
+/// Mudanças em `.git` que alteram o status ou a branch (commit, add, switch).
+fn is_git_state(path: &Path, root: &Path) -> bool {
+    let Ok(rel) = path.strip_prefix(root.join(".git")) else { return false };
+    let s = rel.to_string_lossy();
+    s == "HEAD" || s == "index" || s.starts_with("refs") || s == "packed-refs"
+}
+
 #[tauri::command]
 pub fn watch_start(
     app: AppHandle,
@@ -48,6 +55,7 @@ pub fn watch_start(
 
     let mut debouncer = new_debouncer(DEBOUNCE, None, move |result: DebounceEventResult| {
         let mut payload = FsChanged { paths: Vec::new(), rescan: false };
+        let mut git_changed = false;
         match result {
             Ok(events) => {
                 for event in events {
@@ -55,6 +63,9 @@ pub fn watch_start(
                         payload.rescan = true;
                     }
                     for p in &event.paths {
+                        if !git_changed && is_git_state(p, &root_for_handler) {
+                            git_changed = true;
+                        }
                         if !is_excluded(p, &root_for_handler, &excludes) {
                             let s = path_to_string(p);
                             if !payload.paths.contains(&s) {
@@ -65,6 +76,9 @@ pub fn watch_start(
                 }
             }
             Err(_) => payload.rescan = true,
+        }
+        if git_changed {
+            let _ = app.emit("git://changed", ());
         }
         if payload.rescan || !payload.paths.is_empty() {
             let _ = app.emit("fs://changed", payload);

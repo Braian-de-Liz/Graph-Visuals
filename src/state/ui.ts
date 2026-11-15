@@ -22,6 +22,8 @@ interface Layout {
   leftWidth: number;
   rightOpen: boolean;
   rightWidth: number;
+  /** Trilho de agentes (lateral esquerda) oculto com Ctrl+N; os andares continuam. */
+  railHidden: boolean;
   bottomHeight: number;
   bottomCollapsed: boolean;
   /** Proporção dos andares da lateral direita (agente acima, arquivos, agente abaixo). */
@@ -31,6 +33,8 @@ interface Layout {
 }
 
 interface UiState extends Layout {
+  /** Lateral direita inteira oculta (Ctrl+L), mesmo com agentes nos andares. */
+  rightHidden: boolean;
   /** Painel inferior temporariamente expandido. */
   bottomExpanded: boolean;
   find: null | FindMode;
@@ -39,7 +43,19 @@ interface UiState extends Layout {
   /** Primeira tecla de uma sequência (ex.: "Ctrl+K") aguardando a segunda. */
   chord: string | null;
   locate: LocateResult | null;
-  toast: { text: string; tone: "info" | "error"; id: number } | null;
+  /** Avisos visíveis agora (no máximo 3). */
+  toasts: ToastItem[];
+  /** Histórico da sessão, mais recente primeiro (no máximo 30). */
+  notices: ToastItem[];
+  /** Erros ainda não vistos no histórico. */
+  unseenErrors: number;
+}
+
+export interface ToastItem {
+  id: number;
+  text: string;
+  tone: "info" | "error";
+  at: number;
 }
 
 const KEY = "gv.layout";
@@ -49,6 +65,7 @@ const layout = {
   leftWidth: 340,
   rightOpen: false, // a lateral direita inicia recolhida
   rightWidth: 300,
+  railHidden: false,
   bottomHeight: 300,
   bottomCollapsed: false,
   rightWeights: { top: 1, files: 1, bottom: 1 },
@@ -62,13 +79,16 @@ export const uiStore = createStore<UiState>({
   left: layout.left === "expanded" ? "rail" : layout.left,
   bottomHeight: Math.max(layout.bottomHeight, 200),
   rightOpen: false,
+  rightHidden: false,
   bottomExpanded: false,
   find: null,
   settingsOpen: false,
   shortcutsOpen: false,
   chord: null,
   locate: null,
-  toast: null,
+  toasts: [],
+  notices: [],
+  unseenErrors: 0,
 });
 
 uiStore.subscribe(() => {
@@ -78,6 +98,7 @@ uiStore.subscribe(() => {
     leftWidth: s.leftWidth,
     rightOpen: s.rightOpen,
     rightWidth: s.rightWidth,
+    railHidden: s.railHidden,
     bottomHeight: s.bottomHeight,
     bottomCollapsed: s.bottomCollapsed,
     rightWeights: s.rightWeights,
@@ -85,13 +106,22 @@ uiStore.subscribe(() => {
   } satisfies Layout);
 });
 
+/** Mostra o explorador de arquivos (reexibe a lateral direita se estiver oculta). */
+export const openExplorer = () => uiStore.set({ rightOpen: true, rightHidden: false });
+
+/** Botão do explorador: alterna só a árvore de arquivos; os agentes da lateral ficam. */
+export const toggleExplorer = () =>
+  uiStore.set((s) => (s.rightHidden ? { rightHidden: false, rightOpen: true } : { rightOpen: !s.rightOpen }));
+
 let toastSeq = 0;
-let toastTimer = 0;
 export function toast(text: string, tone: "info" | "error" = "info") {
-  const id = ++toastSeq;
-  uiStore.set({ toast: { text, tone, id } });
-  clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => {
-    if (uiStore.get().toast?.id === id) uiStore.set({ toast: null });
-  }, tone === "error" ? 6000 : 3200);
+  const item: ToastItem = { id: ++toastSeq, text, tone, at: Date.now() };
+  uiStore.set((s) => ({
+    toasts: [...s.toasts.filter((t) => t.text !== text), item].slice(-3),
+    notices: [item, ...s.notices].slice(0, 30),
+    unseenErrors: s.unseenErrors + (tone === "error" ? 1 : 0),
+  }));
+  window.setTimeout(() => dismissToast(item.id), tone === "error" ? 8000 : 3200);
 }
+
+export const dismissToast = (id: number) => uiStore.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));

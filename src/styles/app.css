@@ -997,18 +997,48 @@ body.resizing .splitter::after {
   padding: 0 8px 0 14px;
   border-bottom: 1px solid var(--line);
   min-width: 0;
+  container-type: inline-size;
 }
 .primary-workspace.collapsed .primary-head {
   border-bottom: none;
 }
 .primary-agent {
+  flex: none;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .primary-session {
+  min-width: 0;
   font-size: 12px;
   color: var(--text-2);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.primary-head .state-chip {
+  flex: none;
+  white-space: nowrap;
+}
+.primary-head .select {
+  min-width: 90px;
+  flex-shrink: 1;
+}
+.primary-head .dock-picker,
+.primary-head .icon-btn {
+  flex: none;
+}
+/* Painel estreito: os botões têm prioridade sobre os textos secundários. */
+@container (max-width: 700px) {
+  .primary-head .primary-cwd,
+  .primary-head .state-chip {
+    display: none;
+  }
+}
+@container (max-width: 560px) {
+  .primary-head .select {
+    display: none;
+  }
 }
 .primary-cwd {
   font-size: 11px;
@@ -2661,4 +2691,529 @@ body.dragging-session * {
 }
 .md-preview [align="center"] {
   text-align: center;
+}
+
+/* ---------- Git: seletor de branch e status da working tree ---------- */
+.branch-picker {
+  position: relative;
+}
+.branch-btn {
+  max-width: 240px;
+  color: var(--text-2);
+  font-weight: 400;
+}
+.branch-btn.on {
+  background: var(--fill-2);
+}
+.branch-btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.branch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-sync {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.branch-dirty {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--vision-gold);
+}
+.branch-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.branch-filter {
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--fill-1);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.branch-filter:focus {
+  border-color: var(--line-3);
+}
+.branch-list {
+  max-height: 340px;
+  overflow: auto;
+}
+.branch-list .cm-item svg {
+  flex: none;
+  color: var(--text-3);
+}
+.branch-list .cm-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.branch-section {
+  padding: 6px 10px 3px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.branch-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.git-badge {
+  flex: none;
+  margin-left: auto;
+  width: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.tree-item.git-M .tree-name,
+.flat-list li.git-M .name,
+.git-M .git-badge {
+  color: #e2c08d;
+}
+.tree-item.git-A .tree-name,
+.tree-item.git-U .tree-name,
+.flat-list li.git-A .name,
+.flat-list li.git-U .name,
+.git-A .git-badge,
+.git-U .git-badge {
+  color: #73c991;
+}
+.tree-item.git-R .tree-name,
+.flat-list li.git-R .name,
+.git-R .git-badge {
+  color: var(--arc-light);
+}
+.tree-item.git-D .tree-name,
+.tree-item.git-C .tree-name,
+.flat-list li.git-D .name,
+.flat-list li.git-C .name,
+.git-D .git-badge,
+.git-C .git-badge {
+  color: #ef8a98;
+}
+.tree-item.git-dir .tree-name {
+  color: #e2c08d;
+}
+.tree-item.git-dir .mod-dot:not(.active) {
+  background: #e2c08d;
+  opacity: 0.7;
+}
+.flat-list li.gone {
+  cursor: default;
+}
+.flat-list li.gone .name {
+  text-decoration: line-through;
+}
+
+/* ---------- Diálogo de confirmação genérico ---------- */
+.confirm-items {
+  list-style: none;
+  margin: -6px 0 16px;
+  padding: 8px 10px;
+  max-height: 180px;
+  overflow: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--fill-1);
+  font-size: 12px;
+  color: var(--text-2);
+}
+.confirm-items li {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.confirm-items li.more {
+  color: var(--text-4);
+}
+
+/* ---------- Avisos empilhados ---------- */
+.toast-stack {
+  position: fixed;
+  z-index: 200;
+  left: 50%;
+  top: 56px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.toast-stack .toast {
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  animation: toast-stack-in var(--t) var(--ease);
+}
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-4);
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: var(--fill-2);
+  color: var(--text);
+}
+@keyframes toast-stack-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------- Popovers da barra superior ---------- */
+.popover-anchor {
+  position: relative;
+  display: inline-flex;
+}
+.popover {
+  position: absolute;
+  z-index: 260;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 340px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: rgba(12, 12, 14, 0.98);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: default;
+  animation: cm-in 90ms var(--ease);
+}
+.popover-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.popover-head strong {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.popover-text {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+.popover-text.error {
+  color: #ef8a98;
+}
+.popover-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.popover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.popover .log {
+  margin: 10px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+  user-select: text;
+  white-space: pre-wrap;
+}
+button.status-pill {
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+button.status-pill:hover,
+button.status-pill.on {
+  background: var(--fill-2);
+  border-color: var(--line-2);
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+.status-dot.ok {
+  background: var(--arc-light);
+}
+.status-dot.busy {
+  background: var(--text);
+}
+.status-dot.warn {
+  background: var(--vision-gold);
+}
+.status-dot.error {
+  background: var(--vision-red);
+}
+
+.install-hint {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: left;
+}
+.install-hint p {
+  margin: 0 0 6px;
+}
+.install-hint code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text);
+}
+.install-cmd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.install-cmd code {
+  flex: 1;
+  user-select: text;
+}
+.graph-placeholder .install-hint {
+  max-width: 420px;
+}
+
+.notices-panel {
+  left: auto;
+  right: 0;
+  width: 380px;
+  padding: 10px 6px 6px;
+}
+.notices-panel .popover-head {
+  padding: 0 6px;
+}
+.notices-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow: auto;
+}
+.notices-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 6px;
+  user-select: text;
+}
+.notices-list li:hover {
+  background: var(--fill-1);
+}
+.notice-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+.notices-list li.error .notice-dot {
+  background: var(--vision-red);
+}
+.notices-list li.error .notice-text {
+  color: #f3c3ca;
+}
+.notice-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.notices-list time {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-4);
+}
+.topnav-actions .icon-btn {
+  position: relative;
+}
+.notice-badge {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--vision-red);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* ---------- Abas do editor ---------- */
+.editor-tabs {
+  flex: none;
+  display: flex;
+  gap: 1px;
+  height: 32px;
+  padding: 0 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+.editor-tabs::-webkit-scrollbar {
+  display: none;
+}
+.editor-tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 0 4px 0 10px;
+  border-bottom: 1.5px solid transparent;
+  font-size: 12px;
+  color: var(--text-3);
+  cursor: pointer;
+  user-select: none;
+}
+.editor-tab:hover {
+  color: var(--text-2);
+  background: var(--fill-1);
+}
+.editor-tab.on {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+.editor-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.editor-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-tab-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-4);
+  cursor: pointer;
+}
+.editor-tab-close:hover {
+  background: var(--fill-2);
+  color: var(--text);
+}
+.editor-tab-close .dirty-dot {
+  position: absolute;
+  display: none;
+}
+.editor-tab-close svg {
+  opacity: 0;
+}
+.editor-tab.on .editor-tab-close svg,
+.editor-tab:hover .editor-tab-close svg {
+  opacity: 1;
+}
+/* Aba com alterações: ponto no lugar do X (o X volta ao passar o mouse). */
+.editor-tab.dirty .editor-tab-close .dirty-dot {
+  display: block;
+}
+.editor-tab.dirty .editor-tab-close svg {
+  opacity: 0;
+}
+.editor-tab.dirty .editor-tab-close:hover .dirty-dot {
+  display: none;
+}
+.editor-tab.dirty .editor-tab-close:hover svg {
+  opacity: 1;
+}
+
+/* ---------- Sessões: renomear ---------- */
+.session-rename {
+  min-width: 0;
+  width: 100%;
+  max-width: 260px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--line-3);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+/* ---------- Explorador: destaque e foco ---------- */
+.flat-list mark {
+  background: none;
+  color: var(--arc-light);
+  font-weight: 600;
+}
+.flat-list li:focus,
+.flat-list li:focus-visible {
+  outline: none;
+  background: var(--fill-2);
+  box-shadow: inset 2px 0 0 var(--text-3);
+}
+
+.inspector-neighbors li.inspector-more {
+  cursor: default;
+  font-size: 11px;
+  color: var(--text-4);
+}
+.inspector-neighbors li.inspector-more:hover {
+  background: none;
+}
+.pending-note {
+  align-self: center;
+  font-size: 11.5px;
+  color: var(--vision-gold);
 }

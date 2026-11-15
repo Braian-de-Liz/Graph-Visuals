@@ -7,13 +7,74 @@ import { projectStore, toggleExpanded } from "../state/project";
 import { settingsStore } from "../state/settings";
 import { activityStore, isActive } from "../state/activity";
 import { cancelEdit, commitEdit, confirmDelete, explorerStore, menuFor, treeItemKey } from "../state/explorer";
+import { gitStore } from "../state/git";
+import type { GitChange } from "../lib/ipc";
+
+const GIT_LABEL: Record<GitChange["status"], string> = {
+  M: "Modificado",
+  A: "Adicionado",
+  D: "Excluído",
+  R: "Renomeado",
+  U: "Não rastreado",
+  C: "Conflito",
+};
+
+export const gitLabel = (c: GitChange) => GIT_LABEL[c.status] + (c.staged ? " (staged)" : "");
+
+/** Foca o primeiro item da árvore dentro de `scope`. */
+export function focusFirstTreeItem(scope: HTMLElement) {
+  scope.querySelector<HTMLElement>(".tree-item[data-depth]")?.focus();
+}
+
+/** Setas na árvore, como no VS Code. Retorna true se tratou a tecla. */
+function treeArrowKey(e: React.KeyboardEvent<HTMLDivElement>, entry: DirEntry, open: boolean): boolean {
+  const el = e.currentTarget;
+  const tree = el.closest(".file-tree");
+  if (!tree) return false;
+  const items = [...tree.querySelectorAll<HTMLElement>(".tree-item[data-depth]")];
+  const i = items.indexOf(el);
+  const depth = Number(el.dataset.depth);
+  const focus = (t: HTMLElement | undefined) => t?.focus();
+  switch (e.key) {
+    case "ArrowDown":
+      focus(items[i + 1]);
+      return true;
+    case "ArrowUp":
+      focus(items[i - 1]);
+      return true;
+    case "Home":
+      focus(items[0]);
+      return true;
+    case "End":
+      focus(items[items.length - 1]);
+      return true;
+    case "ArrowRight":
+      if (!entry.isDir) return true;
+      if (!open) toggleExpanded(entry.path);
+      else if (items[i + 1] && Number(items[i + 1].dataset.depth) > depth) focus(items[i + 1]);
+      return true;
+    case "ArrowLeft":
+      if (entry.isDir && open) {
+        toggleExpanded(entry.path);
+        return true;
+      }
+      for (let k = i - 1; k >= 0; k--) {
+        if (Number(items[k].dataset.depth) < depth) {
+          focus(items[k]);
+          break;
+        }
+      }
+      return true;
+  }
+  return false;
+}
 
 /** Árvore do sistema de arquivos real (independente do grafo). */
 export function FileTree({ onOpenFile }: { onOpenFile: (absPath: string) => void }) {
   const root = projectStore.use((s) => s.root);
   if (!root) return null;
   return (
-    <div className="file-tree" onContextMenu={(e) => openContextMenu(e, menuFor(null, onOpenFile))}>
+    <div className="file-tree" role="tree" aria-label="Arquivos do projeto" onContextMenu={(e) => openContextMenu(e, menuFor(null, onOpenFile))}>
       <DirChildren path={root} depth={0} onOpenFile={onOpenFile} />
     </div>
   );
@@ -103,11 +164,20 @@ function TreeItem({ entry, depth, onOpenFile }: { entry: DirEntry; depth: number
   const renaming = explorerStore.use((s) => s.edit?.kind === "rename" && pathKey(s.edit.target) === key);
   const root = projectStore.use((s) => s.root)!;
   const modified = projectStore.use((s) => s.modified);
+  const isRepo = gitStore.use((s) => !!s.status?.isRepo);
+  const byRel = gitStore.use((s) => s.byRel);
+  const dirtyDirs = gitStore.use((s) => s.dirtyDirs);
   const ref = useRef<HTMLDivElement>(null);
   const rel = toRel(root, entry.path) ?? "";
-  const isModified = entry.isDir
-    ? [...modified].some((m) => m.toLowerCase().startsWith(rel.toLowerCase() + "/"))
-    : modified.has(rel);
+  const relKey = rel.toLowerCase();
+  const change = isRepo ? (entry.isDir ? undefined : byRel.get(relKey)) : undefined;
+  const isModified = isRepo
+    ? entry.isDir
+      ? dirtyDirs.has(relKey) || byRel.has(relKey)
+      : !!change
+    : entry.isDir
+      ? [...modified].some((m) => m.toLowerCase().startsWith(relKey + "/"))
+      : modified.has(rel);
   // Re-renderiza a cada evento de atividade; o brilho some após o TTL.
   activityStore.use((s) => s.version);
   const active = !entry.isDir && isActive(rel);
@@ -121,14 +191,24 @@ function TreeItem({ entry, depth, onOpenFile }: { entry: DirEntry; depth: number
       <div
         ref={ref}
         tabIndex={0}
-        className={`tree-item ${entry.isDir ? "dir" : "file"} ${revealed ? "revealed" : ""} ${renaming ? "editing" : ""}`}
+        role="treeitem"
+        aria-level={depth + 1}
+        aria-expanded={entry.isDir ? open : undefined}
+        aria-selected={revealed}
+        data-depth={depth}
+        className={`tree-item ${entry.isDir ? "dir" : "file"} ${revealed ? "revealed" : ""} ${renaming ? "editing" : ""} ${
+          isRepo && isModified ? `git-${change?.status ?? "dir"}` : ""
+        }`}
         style={{ paddingLeft: depth * 14 + 10 }}
         title={entry.path}
         onClick={() => !renaming && (entry.isDir ? toggleExpanded(entry.path) : onOpenFile(entry.path))}
         onKeyDown={(e) => {
           if (renaming) return;
           if (e.key === "Enter") entry.isDir ? toggleExpanded(entry.path) : onOpenFile(entry.path);
-          else treeItemKey(e, entry);
+          else if (treeArrowKey(e, entry, open)) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else treeItemKey(e, entry);
         }}
         onContextMenu={(e) => {
           ref.current?.focus();
@@ -140,11 +220,25 @@ function TreeItem({ entry, depth, onOpenFile }: { entry: DirEntry; depth: number
         </span>
         <Icon name={entry.isDir ? (open ? "folderOpen" : "folder") : "file"} size={14} className="tree-icon" />
         {renaming ? <NameInput initial={baseName(entry.path)} /> : <span className="tree-name">{entry.name}</span>}
-        {!renaming && (isModified || active) && (
-          <span className={`mod-dot ${active ? "active" : ""}`} title={active ? "Gravado durante uma sessão de agente" : "Alterado nesta sessão"} />
+        {!renaming && change && !active ? (
+          <span className="git-badge" title={gitLabel(change)}>
+            {change.status}
+          </span>
+        ) : (
+          !renaming &&
+          (isModified || active) && (
+            <span
+              className={`mod-dot ${active ? "active" : ""}`}
+              title={active ? "Gravado durante uma sessão de agente" : isRepo ? "Contém alterações não commitadas" : "Alterado nesta sessão"}
+            />
+          )
         )}
       </div>
-      {open && entry.isDir && <DirChildren path={entry.path} depth={depth + 1} onOpenFile={onOpenFile} />}
+      {open && entry.isDir && (
+        <div role="group">
+          <DirChildren path={entry.path} depth={depth + 1} onOpenFile={onOpenFile} />
+        </div>
+      )}
     </>
   );
 }

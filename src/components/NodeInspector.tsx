@@ -89,6 +89,9 @@ export function NodeInspector() {
             </li>
           );
         })}
+        {neighbors.length > 300 && (
+          <li className="inspector-more">Mostrando 300 de {neighbors.length.toLocaleString("pt-BR")} conexões.</li>
+        )}
       </ul>
     </aside>
   );

@@ -4,21 +4,15 @@
 // uma sessão entre posições nunca reinicia o processo.
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { AgentGlyph, Icon } from "./Icons";
-import { TerminalHost } from "./AgentSessionView";
+import { SessionTitle, StopButton, TerminalHost, sessionMenu } from "./AgentSessionView";
+import { openContextMenu } from "./ContextMenu";
 import { ProjectExplorer } from "./ProjectExplorer";
 import { Splitter } from "./Splitter";
-import { closeSession, placeSession, sessionAt, sessionsStore, stopSession, type Dock } from "../state/sessions";
+import { DOCK_LABEL, closeSession, placeSession, sessionAt, sessionsStore, type Dock } from "../state/sessions";
 import { uiStore } from "../state/ui";
 import { beginSessionDrag } from "../state/dnd";
 
-/** Ordem de exibição no seletor: da esquerda para a direita da tela. */
-export const DOCK_LABEL: Record<Dock, string> = {
-  leftTop: "Esquerda · em cima",
-  leftBottom: "Esquerda · embaixo",
-  primary: "Painel inferior",
-  rightTop: "Direita · em cima",
-  rightBottom: "Direita · embaixo",
-};
+export { DOCK_LABEL };
 
 const GLYPH_FILL: Record<Dock, { x: number; y: number; w: number; h: number }> = {
   leftTop: { x: 1.5, y: 1.5, w: 4.5, h: 6.5 },
@@ -135,20 +129,18 @@ function AgentFloor({ dock }: { dock: Dock }) {
   const alive = session.state === "running" || session.state === "starting";
   return (
     <section className="agent-floor">
-      <header className="floor-head" onPointerDown={(e) => beginSessionDrag(e, session)} title="Arraste para mover a sessão">
+      <header className="floor-head" onPointerDown={(e) => beginSessionDrag(e, session)} onContextMenu={(e) => openContextMenu(e, sessionMenu(session))} title="Arraste para mover a sessão">
         <AgentGlyph id={session.agentId} size={20} />
         <div className="floor-title" title={`${session.agentName} · ${session.title}`}>
           <strong>{session.agentName}</strong>
-          <span>{session.title}</span>
+          <SessionTitle session={session} />
         </div>
         <span className={`pulse ${session.state}`} title={session.state} />
         <span className="spacer" />
         <DockPicker value={dock} onPick={(d) => placeSession(session.id, d)} label="Mover para" />
         <span className="divider" />
         {alive ? (
-          <button className="icon-btn" title="Encerrar processo" onClick={() => stopSession(session.id)}>
-            <Icon name="stop" />
-          </button>
+          <StopButton id={session.id} />
         ) : (
           <button className="icon-btn danger" title="Fechar sessão" onClick={() => closeSession(session.id)}>
             <Icon name="trash" />

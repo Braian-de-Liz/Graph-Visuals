@@ -4,6 +4,7 @@ import { GraphControls } from "./GraphControls";
 import { NodeInspector } from "./NodeInspector";
 import { LocateConfirm } from "./QuickSpatialFind";
 import { BrandMark, Icon } from "./Icons";
+import { GraphifyInstallHint, isGraphifyMissing } from "./GraphStatus";
 import { graphStore, runAnalysis } from "../state/graph";
 import { openProject, pickAndOpenProject, projectStore } from "../state/project";
 import { settingsStore } from "../state/settings";
@@ -91,6 +92,7 @@ function GraphPlaceholder() {
     <div className="graph-placeholder">
       {(status === "analyzing" || status === "loading") && <div className="loader" />}
       <p className={status === "error" ? "error" : ""}>{message || "Sem grafo para este projeto."}</p>
+      {isGraphifyMissing(message) && <GraphifyInstallHint />}
       {status === "error" && (
         <div className="row">
           <button className="btn" onClick={() => void runAnalysis()}>
