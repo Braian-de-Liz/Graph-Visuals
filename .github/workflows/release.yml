@@ -1,0 +1,61 @@
+# Gera o instalador do Windows e abre uma release em rascunho.
+#
+# Como usar: aba Actions → Release → Run workflow. A tag (v + versão do
+# src-tauri/tauri.conf.json) é criada junto com a release, que fica como
+# rascunho até alguém revisar e clicar em "Publish release".
+# Só roda manualmente: publicar a release cria a tag, e um gatilho por tag
+# dispararia um segundo build em cima da release já publicada.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Instalador Windows
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Instalar dependências do frontend
+        run: npm ci
+
+      - name: Ler as notas da release
+        id: notas
+        shell: bash
+        run: |
+          {
+            echo 'corpo<<FIM_DAS_NOTAS'
+            cat .github/release-notes.md
+            echo 'FIM_DAS_NOTAS'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compilar e anexar à release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Graph Visuals v__VERSION__ (alpha)
+          releaseBody: ${{ steps.notas.outputs.corpo }}
+          releaseDraft: true
+          prerelease: false

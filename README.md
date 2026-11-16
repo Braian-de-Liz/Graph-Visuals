@@ -89,6 +89,10 @@ Agentes de IA editam muitos arquivos rápido, e em uma árvore de diretórios é
 
 Os pré-requisitos do Tauri para cada sistema estão em [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/).
 
+### Baixando o instalador (Windows)
+
+Baixe o `-setup.exe` da [última release](https://github.com/Braian-de-Liz/Graph-Visuals/releases/latest) e instale o [Graphify](https://pypi.org/project/graphifyy/) antes de abrir. O instalador ainda não é assinado; se o Windows mostrar o aviso do SmartScreen, use **Mais informações → Executar assim mesmo**.
+
 ### Rodando a partir do código
 
 ```bash
@@ -105,6 +109,16 @@ npm run tauri build
 ```
 
 Os arquivos ficam em `src-tauri/target/release/bundle/` (`.msi` e `-setup.exe` no Windows).
+
+### Publicando uma versão
+
+O workflow `.github/workflows/release.yml` gera o instalador do Windows no GitHub Actions e abre uma release em rascunho.
+
+1. Atualize a versão em `package.json`, `src-tauri/Cargo.toml` e `src-tauri/tauri.conf.json` (os três com o mesmo número).
+2. Na aba **Actions**, abra **Release** e clique em **Run workflow**. A tag `v` + versão é criada junto com a release.
+3. Quando o workflow terminar (uns 15 minutos), revise o rascunho em **Releases** e clique em **Publish release**.
+
+As notas da release vêm de `.github/release-notes.md`.
 
 ## Uso
 
