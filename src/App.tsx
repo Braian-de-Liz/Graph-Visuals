@@ -34,6 +34,7 @@ export default function App() {
   const rightWidth = uiStore.use((s) => s.rightWidth);
   const rightHidden = uiStore.use((s) => s.rightHidden);
   const railHidden = uiStore.use((s) => s.railHidden);
+  const columnHidden = uiStore.use((s) => s.columnHidden);
   const bottomHeight = uiStore.use((s) => s.bottomHeight);
   const bottomCollapsed = uiStore.use((s) => s.bottomCollapsed);
   const bottomExpanded = uiStore.use((s) => s.bottomExpanded);
@@ -62,7 +63,7 @@ export default function App() {
     };
   }, []);
 
-  const leftColumn = left === "expanded" || !!leftTopId || !!leftBottomId;
+  const leftColumn = !columnHidden && (left === "expanded" || !!leftTopId || !!leftBottomId);
   const rail = left === "hidden" || railHidden ? 0 : RAIL;
   // As laterais cedem largura em janelas estreitas para a região central não
   // sumir. As larguras salvas não mudam: voltam ao alargar a janela.

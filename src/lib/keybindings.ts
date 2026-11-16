@@ -111,7 +111,15 @@ async function toggleFullscreen() {
 
 function showExplorer() {
   openExplorer();
-  requestAnimationFrame(() => document.querySelector<HTMLInputElement>(".explorer-search input")?.focus());
+}
+
+/** Ctrl+B: esconde o painel e as sessões da esquerda, deixando só a barra de ícones; de novo, mostra. */
+function toggleLeftColumn() {
+  const ui = uiStore.get();
+  const { leftTopId, leftBottomId } = sessionsStore.get();
+  const visible = !ui.columnHidden && (ui.left === "expanded" || !!leftTopId || !!leftBottomId);
+  if (visible) uiStore.set({ columnHidden: true, left: "rail" });
+  else uiStore.set({ columnHidden: false, left: "expanded" });
 }
 
 // ---------- tabela ----------
@@ -126,8 +134,9 @@ export const KEYBINDINGS: Keybinding[] = [
   { id: "settings", group: "Geral", label: "Configurações", keys: ["ctrl+,"], skipShell: true, run: () => uiStore.set({ settingsOpen: true }) },
   { id: "shortcuts", group: "Geral", label: "Atalhos de teclado", keys: ["ctrl+k ctrl+s"], run: () => uiStore.set({ shortcutsOpen: true }) },
 
-  { id: "toggleSidebar", group: "Painéis", label: "Alternar barra lateral (agentes)", keys: ["ctrl+b"], skipShell: true, run: () => uiStore.set((s) => ({ left: s.left === "hidden" ? "rail" : "hidden" })) },
-  { id: "toggleAgentRail", group: "Painéis", label: "Alternar trilho de agentes", keys: ["ctrl+n"], skipShell: true, run: () => uiStore.set((s) => ({ railHidden: !s.railHidden })) },
+  { id: "toggleSidebar", group: "Painéis", label: "Alternar barra de agentes", keys: ["ctrl+n"], skipShell: true, run: () => uiStore.set((s) => (s.left === "hidden" ? { left: "rail", railHidden: false } : { railHidden: !s.railHidden })) },
+  { id: "toggleAgentRail", group: "Painéis", label: "Alternar lateral esquerda (mantém a barra de ícones)", keys: ["ctrl+b"], skipShell: true, run: toggleLeftColumn },
+  { id: "maximizeAgent", group: "Painéis", label: "Maximizar a sessão dentro do painel do agente", keys: ["ctrl+i"], skipShell: true, run: () => uiStore.set((s) => (s.agentMaximized ? { agentMaximized: false } : { left: "expanded", columnHidden: false, agentMaximized: true })) },
   { id: "toggleAuxBar", group: "Painéis", label: "Alternar lateral direita (explorador e agentes)", keys: ["ctrl+l", "ctrl+alt+b"], skipShell: true, run: toggleRightSide },
   { id: "showExplorer", group: "Painéis", label: "Mostrar explorador", keys: ["ctrl+shift+e"], skipShell: true, run: showExplorer },
   { id: "togglePanel", group: "Painéis", label: "Alternar painel (agente principal)", keys: ["ctrl+j"], skipShell: true, run: () => uiStore.set((s) => ({ bottomCollapsed: !s.bottomCollapsed, bottomExpanded: false })) },

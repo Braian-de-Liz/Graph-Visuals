@@ -26,6 +26,8 @@ import type { AgentInfo } from "../lib/ipc";
 export function AgentSidebar() {
   const mode = uiStore.use((s) => s.left);
   const railHidden = uiStore.use((s) => s.railHidden);
+  const columnHidden = uiStore.use((s) => s.columnHidden);
+  const maximized = uiStore.use((s) => s.agentMaximized);
   const loaded = sessionsStore.use((s) => s.agentsLoaded);
   const leftTop = sessionsStore.use((s) => s.leftTopId);
   const leftBottom = sessionsStore.use((s) => s.leftBottomId);
@@ -34,8 +36,9 @@ export function AgentSidebar() {
   }, [loaded]);
   if (mode === "hidden") return null;
   // Com os dois andares ocupados, o painel do agente não entra entre eles.
-  const panel = mode === "expanded" && !(leftTop && leftBottom);
-  const column = panel || !!leftTop || !!leftBottom;
+  // Maximizado: com agentes encaixados na coluna, o painel sai e eles ocupam toda a altura.
+  const panel = !columnHidden && mode === "expanded" && !(leftTop && leftBottom) && !(maximized && (leftTop || leftBottom));
+  const column = panel || (!columnHidden && (!!leftTop || !!leftBottom));
   return (
     <div className={`agent-sidebar ${mode} ${column ? "with-column" : ""}`}>
       {!railHidden && <AgentList />}
@@ -62,12 +65,12 @@ function AgentList() {
       return;
     }
     sessionsStore.set({ selectedAgentId: a.id, addingAgent: false });
-    uiStore.set({ left: "expanded" });
+    uiStore.set({ left: "expanded", columnHidden: false });
   };
 
   const addAgent = () => {
     sessionsStore.set({ addingAgent: true });
-    uiStore.set({ left: "expanded" });
+    uiStore.set({ left: "expanded", columnHidden: false });
   };
 
   const render = (a: AgentInfo) => {
@@ -114,6 +117,7 @@ function AgentPanel() {
   const agent = agents.find((a) => a.id === selectedId) ?? null;
   const addingAgent = sessionsStore.use((s) => s.addingAgent);
   const custom = settingsStore.use((s) => s.customAgents);
+  const maximized = uiStore.use((s) => s.agentMaximized);
 
   if (addingAgent) return <AddAgentForm />;
 
@@ -131,7 +135,7 @@ function AgentPanel() {
   const create = () => launchSession(agent, root, launchDock);
 
   return (
-    <div className="agent-panel">
+    <div className={`agent-panel ${maximized ? "maximized" : ""}`}>
       <header className="agent-panel-head">
         <AgentGlyph id={agent.id} label={agent.name} size={40} />
         <div className="agent-panel-title">
@@ -149,6 +153,13 @@ function AgentPanel() {
             <Icon name="trash" />
           </button>
         )}
+        <button
+          className="icon-btn"
+          title={maximized ? "Restaurar painel (Ctrl+I)" : "Maximizar sessão no painel (Ctrl+I)"}
+          onClick={() => uiStore.set({ agentMaximized: !maximized })}
+        >
+          <Icon name={maximized ? "collapse" : "expand"} />
+        </button>
         <button className="icon-btn" title="Recolher" onClick={() => uiStore.set({ left: "rail" })}>
           <Icon name="panelLeft" />
         </button>
@@ -173,6 +184,7 @@ function AgentPanel() {
       </ul>
 
       <div className="agent-panel-view">
+        <MaxToggle />
         {viewed && !dockOf(viewed.id, state) ? (
           <>
             <div className="view-head">
@@ -193,6 +205,16 @@ function AgentPanel() {
         Executável original, sem argumentos ou variáveis extras. A IDE só repassa o que você digita.
       </p>
     </div>
+  );
+}
+
+function MaxToggle() {
+  const maximized = uiStore.use((s) => s.agentMaximized);
+  if (!maximized) return null;
+  return (
+    <button className="icon-btn max-float" title="Restaurar (Ctrl+I)" onClick={() => uiStore.set({ agentMaximized: false })}>
+      <Icon name="collapse" />
+    </button>
   );
 }
 

@@ -37,6 +37,10 @@ interface UiState extends Layout {
   rightHidden: boolean;
   /** Painel inferior temporariamente expandido. */
   bottomExpanded: boolean;
+  /** Painel do agente ocupa a janela inteira (só vale com a lateral expandida). */
+  agentMaximized: boolean;
+  /** Coluna esquerda (painel e sessões encaixadas) oculta com Ctrl+B; a barra de ícones fica. */
+  columnHidden: boolean;
   find: null | FindMode;
   settingsOpen: boolean;
   shortcutsOpen: boolean;
@@ -81,6 +85,8 @@ export const uiStore = createStore<UiState>({
   rightOpen: false,
   rightHidden: false,
   bottomExpanded: false,
+  agentMaximized: false,
+  columnHidden: false,
   find: null,
   settingsOpen: false,
   shortcutsOpen: false,
@@ -104,6 +110,12 @@ uiStore.subscribe(() => {
     rightWeights: s.rightWeights,
     leftWeights: s.leftWeights,
   } satisfies Layout);
+});
+
+// Recolher o painel do agente também desfaz o modo maximizado.
+uiStore.subscribe(() => {
+  const s = uiStore.get();
+  if (s.agentMaximized && s.left !== "expanded") uiStore.set({ agentMaximized: false });
 });
 
 /** Mostra o explorador de arquivos (reexibe a lateral direita se estiver oculta). */

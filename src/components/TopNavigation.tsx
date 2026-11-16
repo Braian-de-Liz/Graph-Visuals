@@ -52,30 +52,32 @@ export function TopNavigation() {
 
   return (
     <header className="topnav" data-tauri-drag-region>
-      <div className="brand" data-tauri-drag-region>
-        <BrandMark />
-        <span className="brand-name" data-tauri-drag-region>
-          Graph <b>Visuals</b>
-        </span>
+      <div className="topnav-left" data-tauri-drag-region>
+        <div className="brand" data-tauri-drag-region>
+          <BrandMark />
+          <span className="brand-name" data-tauri-drag-region>
+            Graph <b>Visuals</b>
+          </span>
+        </div>
+        <span className="topnav-sep" />
+        <button
+          className="project-btn"
+          aria-haspopup="menu"
+          onClick={(e) => openProjectMenu(e.currentTarget)}
+          title={root ? `${root} · recentes e abrir pasta` : "Abrir projeto"}
+        >
+          {name || "Abrir projeto"}
+          <Icon name="chevronDown" size={12} />
+        </button>
+        {root && (
+          <>
+            <BranchPicker />
+            <span className="topnav-sep" />
+            <GraphStatusPill />
+            {nodes > 0 && <span className="topnav-figure">{nodes.toLocaleString("pt-BR")} nodes</span>}
+          </>
+        )}
       </div>
-      <span className="topnav-sep" />
-      <button
-        className="project-btn"
-        aria-haspopup="menu"
-        onClick={(e) => openProjectMenu(e.currentTarget)}
-        title={root ? `${root} · recentes e abrir pasta` : "Abrir projeto"}
-      >
-        {name || "Abrir projeto"}
-        <Icon name="chevronDown" size={12} />
-      </button>
-      {root && (
-        <>
-          <BranchPicker />
-          <span className="topnav-sep" />
-          <GraphStatusPill />
-          {nodes > 0 && <span className="topnav-figure">{nodes.toLocaleString("pt-BR")} nodes</span>}
-        </>
-      )}
 
       <div className="topnav-center" data-tauri-drag-region>
         <button className="search-trigger" onClick={() => uiStore.set({ find: "files" })}>

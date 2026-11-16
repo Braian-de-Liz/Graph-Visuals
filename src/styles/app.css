@@ -418,8 +418,17 @@ body.resizing .center-bottom {
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
+.topnav-left {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  align-self: stretch;
+}
 .topnav-center {
-  flex: 1;
+  flex: none;
+  width: 360px;
   display: flex;
   justify-content: center;
   align-self: stretch;
@@ -429,7 +438,7 @@ body.resizing .center-bottom {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: min(360px, 100%);
+  width: 100%;
   height: 28px;
   padding: 0 6px 0 10px;
   border-radius: 7px;
@@ -450,7 +459,10 @@ body.resizing .center-bottom {
   color: var(--text-2);
 }
 .topnav-actions {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
+  justify-content: flex-end;
   align-items: center;
   gap: 2px;
   align-self: stretch;
@@ -761,6 +773,33 @@ body.resizing .splitter::after {
     opacity: 0;
     transform: translateX(-6px);
   }
+}
+/* Maximizado: some o painel do agente; o terminal da sessão preenche a coluna. */
+.agent-panel.maximized {
+  gap: 0;
+  padding: 0;
+}
+.agent-panel.maximized > :not(.agent-panel-view) {
+  display: none;
+}
+.agent-panel.maximized .agent-panel-view {
+  position: relative;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+}
+.agent-panel.maximized .view-head {
+  display: none;
+}
+.max-float {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  opacity: 0.55;
+}
+.max-float:hover {
+  opacity: 1;
 }
 .agent-panel-head {
   display: flex;

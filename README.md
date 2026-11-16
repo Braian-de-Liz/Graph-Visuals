@@ -126,7 +126,9 @@ Os atalhos seguem o VS Code. Os marcados com ★ funcionam mesmo com o foco em u
 | `Ctrl+Shift+O` | Ir para símbolo no arquivo |
 | `Ctrl+G` | Ir para a linha |
 | `Ctrl+O` | Abrir pasta (projeto) |
-| `Ctrl+B` ★ | Alternar a barra dos agentes |
+| `Ctrl+N` ★ | Alternar a barra de ícones dos agentes |
+| `Ctrl+B` ★ | Esconder / mostrar a lateral esquerda (painel e sessões), mantendo a barra de ícones |
+| `Ctrl+I` ★ | Maximizar a sessão dentro do painel do agente / restaurar |
 | `Ctrl+L` ★ | Alternar o explorador de arquivos |
 | `Ctrl+J` ★ | Alternar o painel inferior |
 | `` Ctrl+` `` / `Ctrl+'` ★ | Alternar o terminal |
