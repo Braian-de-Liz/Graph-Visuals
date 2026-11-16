@@ -17,6 +17,8 @@ export interface Settings {
   /** Salvar o editor automaticamente após `autoSaveDelay` ms sem digitar. */
   autoSave: boolean;
   autoSaveDelay: number;
+  /** Formatar ao salvar com Ctrl+S (nunca no salvamento automático). */
+  formatOnSave: boolean;
 }
 
 export interface CustomAgent {
@@ -40,6 +42,7 @@ export const settingsStore = createStore<Settings>({
   launchDock: "primary",
   autoSave: true,
   autoSaveDelay: 1000,
+  formatOnSave: false,
   customAgents: [],
   ...loadJson<Partial<Settings>>(KEY, {}),
 });

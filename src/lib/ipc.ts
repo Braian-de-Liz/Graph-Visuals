@@ -64,6 +64,8 @@ export const revealInOs = (path: string) => invoke<void>("reveal_in_os", { path 
 /** Rejeita com `"conflict"` se o arquivo mudou no disco desde `expectedMtime`. */
 export const fsWriteText = (path: string, content: string, expectedMtime: number | null) =>
   invoke<number>("fs_write_text", { path, content, expectedMtime });
+/** Formata o texto com a ferramenta da linguagem (gofmt, rustfmt, Prettier, PHP). Não grava. */
+export const fsFormat = (path: string, content: string) => invoke<string>("fs_format", { path, content });
 export const fsIndex = (excludes: string[]) => invoke<FileIndex>("fs_index", { excludes });
 
 export const watchStart = (excludes: string[]) => invoke<void>("watch_start", { excludes });

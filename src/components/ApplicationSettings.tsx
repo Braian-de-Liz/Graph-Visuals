@@ -28,6 +28,7 @@ function SettingsDialog() {
   const ambient = settingsStore.use((x) => x.ambientMotion);
   const autoSave = settingsStore.use((x) => x.autoSave);
   const autoSaveDelay = settingsStore.use((x) => x.autoSaveDelay);
+  const formatOnSave = settingsStore.use((x) => x.formatOnSave);
   const close = () => uiStore.set({ settingsOpen: false });
   const current = settingsStore.use((x) => x.excludes);
   const parse = (text: string) =>
@@ -92,6 +93,12 @@ function SettingsDialog() {
               hint="Grava o arquivo após um intervalo sem digitar e ao sair do editor (como “files.autoSave: afterDelay” do VS Code)."
               value={autoSave}
               onChange={(v) => settingsStore.set({ autoSave: v })}
+            />
+            <Toggle
+              label="Formatar ao salvar"
+              hint="Ao salvar com Ctrl+S, formata Go (gofmt), Rust (rustfmt), TypeScript/JavaScript (Prettier) e PHP (Pint ou PHP-CS-Fixer). Usa as ferramentas instaladas na máquina ou no projeto; não vale para o salvamento automático."
+              value={formatOnSave}
+              onChange={(v) => settingsStore.set({ formatOnSave: v })}
             />
             <div className="field-row">
               <label>Intervalo (ms)</label>

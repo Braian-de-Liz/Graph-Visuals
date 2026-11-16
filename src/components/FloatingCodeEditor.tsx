@@ -13,7 +13,8 @@ import { Icon } from "./Icons";
 import { openContextMenu } from "./ContextMenu";
 import { gvHighlight, gvTheme, languageFor } from "../editor/codemirror";
 import { importLinks } from "../editor/importLinks";
-import { fsReadText, fsStatMtime, fsWriteText, onFsChanged } from "../lib/ipc";
+import { canFormat, diffChange } from "../editor/format";
+import { fsFormat, fsReadText, fsStatMtime, fsWriteText, onFsChanged } from "../lib/ipc";
 import { baseName, pathKey, toRel } from "../lib/paths";
 import {
   editorStore,
@@ -84,6 +85,7 @@ export function FloatingCodeEditor() {
   const langComp = useRef(new Compartment());
   const roComp = useRef(new Compartment());
   const saveRef = useRef<(force?: boolean, auto?: boolean) => Promise<boolean>>(async () => false);
+  const formatRef = useRef<(quiet?: boolean) => Promise<boolean>>(async () => false);
   const loadingRef = useRef(false);
   // Salvamento automático: contador de edições, timer e estado atual (para callbacks do CodeMirror).
   const changeSeqRef = useRef(0);
@@ -142,6 +144,7 @@ export function FloatingCodeEditor() {
         keymap.of([
           { key: "Mod-h", run: openSearchPanel, preventDefault: true },
           { key: "Mod-Shift-Enter", run: insertLineAbove, preventDefault: true },
+          { key: "Shift-Alt-f", run: () => (void formatRef.current(), true), preventDefault: true },
           indentWithTab,
         ]),
       ),
@@ -302,6 +305,40 @@ export function FloatingCodeEditor() {
   }
 
   /**
+   * Formata a aba ativa com a ferramenta da linguagem (backend). Aplica como
+   * uma única edição; se o texto mudou enquanto a ferramenta rodava, descarta.
+   * `quiet`: chamado pelo salvar, sem avisar quando já estava formatado.
+   */
+  async function formatDoc(quiet = false): Promise<boolean> {
+    const view = viewRef.current;
+    const path = pathRef.current;
+    if (!view || !path || readOnlyRef.current) return false;
+    if (!canFormat(path)) {
+      if (!quiet) toast("Não há formatador para este tipo de arquivo (Go, Rust, TS/JS e PHP)");
+      return false;
+    }
+    const seq = changeSeqRef.current;
+    const before = view.state.doc.toString();
+    try {
+      const out = await fsFormat(path, before);
+      if (!sameKey(pathRef.current, path) || changeSeqRef.current !== seq) {
+        toast("O texto mudou durante a formatação; nada foi alterado");
+        return false;
+      }
+      if (out === before) {
+        if (!quiet) toast("Já está formatado");
+        return true;
+      }
+      view.dispatch({ changes: diffChange(before, out), userEvent: "format" });
+      return true;
+    } catch (e) {
+      toast(`Não foi possível formatar ${baseName(path)}: ${e}`, "error");
+      return false;
+    }
+  }
+  formatRef.current = formatDoc;
+
+  /**
    * Grava a aba ativa. `auto`: salvamento automático, sem aviso, e ignorado
    * enquanto houver um conflito pendente. Retorna true se gravou.
    */
@@ -310,6 +347,9 @@ export function FloatingCodeEditor() {
     const path = pathRef.current;
     if (!view || !path || readOnlyRef.current) return false;
     if (auto && (bannerRef.current || savingRef.current || !editorStore.get().dirty)) return false;
+    // Ctrl+S com "Formatar ao salvar": formata antes de gravar. Se falhar, grava assim mesmo.
+    if (!auto && settingsStore.get().formatOnSave && canFormat(path)) await formatDoc(true);
+    if (!sameKey(pathRef.current, path)) return false;
     const seq = changeSeqRef.current;
     const text = view.state.doc.toString();
     savingRef.current = true;
@@ -572,6 +612,7 @@ export function FloatingCodeEditor() {
           readOnly={readOnly}
           onMode={setMode}
           onSave={() => void saveRef.current()}
+          onFormat={canFormat(openPath) ? () => void formatRef.current() : null}
           onHide={() => editorStore.set({ visible: false })}
           onClose={requestClose}
         />
@@ -735,15 +776,21 @@ function EditorToolbar(props: {
   readOnly: boolean;
   onMode: (m: EditorMode) => void;
   onSave: () => void;
+  onFormat: (() => void) | null;
   onHide: () => void;
   onClose: () => void;
 }) {
-  const { mode, dirty, readOnly, onMode, onSave, onHide, onClose } = props;
+  const { mode, dirty, readOnly, onMode, onSave, onFormat, onHide, onClose } = props;
   return (
     <div className="editor-toolbar">
       <button className="icon-btn" title="Salvar (Ctrl+S)" disabled={!dirty || readOnly} onClick={onSave}>
         <Icon name="save" />
       </button>
+      {onFormat && (
+        <button className="icon-btn" title="Formatar documento (Shift+Alt+F)" disabled={readOnly} onClick={onFormat}>
+          <Icon name="format" />
+        </button>
+      )}
       <span className="divider" />
       <button className={`icon-btn ${mode === "compact" ? "on" : ""}`} title="Compacto" onClick={() => onMode("compact")}>
         <Icon name="compact" />

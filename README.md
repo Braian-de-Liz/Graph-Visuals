@@ -57,6 +57,8 @@ Agentes de IA editam muitos arquivos rápido, e em uma árvore de diretórios é
 - Cinco posições para as sessões: painel inferior e dois andares em cada lateral. Escolha onde o agente abre ao iniciá-lo, ou **arraste a janelinha** até outra posição. Mover uma sessão nunca reinicia o processo.
 
 **Edição e navegação**
+- Formatador no editor (`Shift+Alt+F`, ou ao salvar, nas configurações): Go (`gofmt`), Rust (`rustfmt`), TypeScript/JavaScript (Prettier) e PHP (Pint ou PHP-CS-Fixer). Usa as ferramentas já instaladas na máquina ou no projeto; a IDE não embute nenhuma.
+- Prévia de Markdown ao lado do código (`Ctrl+K V`) ou em tela cheia (`Ctrl+Shift+V`).
 - Editor flutuante (CodeMirror 6) com realce para TS/JS, Rust, Python, JSON, CSS, HTML e Markdown; compacto, expandido ou maximizado, sempre ajustado ao espaço entre as laterais.
 - **Salvamento automático** (configurável) com detecção de conflito: nunca sobrescreve uma alteração feita por um agente.
 - `Ctrl+clique` / `F12` em um caminho de importação abre o arquivo importado.
@@ -149,6 +151,7 @@ Os atalhos seguem o VS Code. Os marcados com ★ funcionam mesmo com o foco em u
 | `` Ctrl+Shift+` `` ★ | Novo terminal |
 | `Ctrl+K Z` | Modo zen (só o grafo) |
 | `Ctrl+S` / `Ctrl+W` | Salvar / fechar o editor |
+| `Shift+Alt+F` | Formatar o arquivo aberto |
 | `F12` / `Ctrl+clique` | Abrir o arquivo de uma importação |
 | `F2` / `Delete` | Renomear / excluir no explorador |
 | `Ctrl+,` ★ | Configurações |

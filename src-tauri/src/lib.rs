@@ -5,6 +5,7 @@
 //! nem renderização.
 
 mod agents;
+mod formatter;
 mod fs_edit;
 mod fs_ops;
 mod git;
@@ -33,6 +34,7 @@ pub fn run() {
             fs_edit::fs_create,
             fs_edit::fs_rename,
             fs_edit::fs_delete,
+            fs_edit::fs_format,
             fs_edit::reveal_in_os,
             git::git_status,
             git::git_branches,

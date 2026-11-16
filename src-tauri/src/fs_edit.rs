@@ -103,6 +103,17 @@ pub fn fs_delete(project: State<'_, ProjectState>, path: String) -> Result<(), S
     trash::delete(&target).map_err(|e| e.to_string())
 }
 
+/// Formata `content` como o arquivo `path` (gofmt, rustfmt, Prettier ou fixer de
+/// PHP). Não grava nada: devolve o texto formatado e o editor decide aplicar.
+#[tauri::command]
+pub async fn fs_format(project: State<'_, ProjectState>, path: String, content: String) -> Result<String, String> {
+    let file = project.resolve_inside(&path)?;
+    let root = project.root()?;
+    tauri::async_runtime::spawn_blocking(move || crate::formatter::format(&root, &file, &content))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Abre o gerenciador de arquivos do sistema com o item selecionado.
 #[tauri::command]
 pub fn reveal_in_os(project: State<'_, ProjectState>, path: String) -> Result<(), String> {

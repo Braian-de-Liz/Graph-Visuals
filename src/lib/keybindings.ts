@@ -30,6 +30,7 @@ export interface Keybinding {
 /** Atalhos de edição tratados pelo CodeMirror (apenas para a lista de referência). */
 export const EDITOR_KEYS: { keys: string; label: string }[] = [
   { keys: "Ctrl+S", label: "Salvar" },
+  { keys: "Shift+Alt+F", label: "Formatar documento (Go, Rust, TS/JS, PHP)" },
   { keys: "F12", label: "Abrir o arquivo da importação (ou Ctrl+clique)" },
   { keys: "Ctrl+F", label: "Localizar" },
   { keys: "Ctrl+H", label: "Substituir" },

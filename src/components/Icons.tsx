@@ -6,7 +6,7 @@ import markSmallUrl from "../assets/brand/mark-small.svg";
 type IconName =
   | "search" | "settings" | "minimize" | "maximize" | "close" | "plus" | "stop" | "star"
   | "expand" | "collapse" | "chevronRight" | "chevronDown" | "target" | "home" | "x"
-  | "refresh" | "orbit" | "folder" | "folderOpen" | "file" | "code" | "save" | "panelLeft"
+  | "refresh" | "orbit" | "folder" | "folderOpen" | "file" | "code" | "save" | "format" | "panelLeft"
   | "panelRight" | "terminal" | "send" | "layers" | "trash" | "eye" | "dot" | "restore" | "compact" | "branch" | "check" | "bell" | "fileAdd" | "folderAdd" | "copy";
 
 const PATHS: Record<IconName, string> = {
@@ -34,6 +34,7 @@ const PATHS: Record<IconName, string> = {
   folderOpen: "M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v1M3 7v10a2 2 0 0 0 2 2h12l3.5-8H7.5L5 17",
   file: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5",
   code: "M9 8l-4 4 4 4M15 8l4 4-4 4M13.5 5l-3 14",
+  format: "M4 6h16M4 10h10M4 14h16M4 18h10",
   save: "M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
   panelLeft: "M4 5h16v14H4zM9 5v14",
   panelRight: "M4 5h16v14H4zM15 5v14",
