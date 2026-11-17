@@ -93,7 +93,16 @@ Os pré-requisitos do Tauri para cada sistema estão em [tauri.app/start/prerequ
 
 ### Baixando o instalador (Windows)
 
-Baixe o `-setup.exe` da [última release](https://github.com/Braian-de-Liz/Graph-Visuals/releases/latest) e instale o [Graphify](https://pypi.org/project/graphifyy/) antes de abrir. O instalador ainda não é assinado; se o Windows mostrar o aviso do SmartScreen, use **Mais informações → Executar assim mesmo**.
+Baixe na [última release](https://github.com/Braian-de-Liz/Graph-Visuals/releases/latest):
+
+| Arquivo | Tamanho | Para quem |
+|---|---|---|
+| `Graph.Visuals_0.1.0_x64-setup.exe` | 2,3 MB | A maioria das pessoas: instalador comum, não precisa de administrador |
+| `Graph.Visuals_0.1.0_x64_en-US.msi` | 3,1 MB | Instalação gerenciada (empresa, GPO, Intune) |
+
+Antes de abrir, instale o [Graphify](https://pypi.org/project/graphifyy/) (`uv tool install graphifyy` ou `pipx install graphifyy`). Sem ele a IDE abre, mas o grafo fica vazio. Os agentes são opcionais e detectados no PATH.
+
+O instalador ainda não é assinado. Se o Windows mostrar o aviso do SmartScreen, use **Mais informações → Executar assim mesmo**. Cada arquivo da release tem o SHA-256 listado na página, para você conferir o download.
 
 ### Rodando a partir do código
 
