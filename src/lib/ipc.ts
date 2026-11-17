@@ -57,7 +57,9 @@ export const fsReadText = (path: string) => invoke<TextFile>("fs_read_text", { p
 export const fsStatMtime = (path: string) => invoke<number>("fs_stat_mtime", { path });
 /** Cria arquivo/pasta em `parent` (aceita "a/b/c.ts"); retorna o caminho criado. */
 export const fsCreate = (parent: string, name: string, isDir: boolean) => invoke<string>("fs_create", { parent, name, isDir });
-export const fsRename = (path: string, newName: string) => invoke<string>("fs_rename", { path, newName });
+export const fsMove = (path: string, destDir: string) => invoke<string>("fs_move", { path, destDir });
+export const fsCopy = (path: string, destDir: string) => invoke<string>("fs_copy", { path, destDir });
+export const fsRename =(path: string, newName: string) => invoke<string>("fs_rename", { path, newName });
 /** Move para a Lixeira. */
 export const fsDelete = (path: string) => invoke<void>("fs_delete", { path });
 export const revealInOs = (path: string) => invoke<void>("reveal_in_os", { path });

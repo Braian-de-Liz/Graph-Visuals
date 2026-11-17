@@ -2,7 +2,7 @@
 // no padrão do VS Code: novo arquivo/pasta, renomear, excluir, copiar caminho,
 // revelar no Explorador do Windows e abrir no terminal integrado.
 import { createStore } from "../lib/store";
-import { fsCreate, fsDelete, fsRename, revealInOs } from "../lib/ipc";
+import { fsCopy, fsCreate, fsDelete, fsMove, fsRename, revealInOs } from "../lib/ipc";
 import { baseName, pathKey, toRel } from "../lib/paths";
 import { projectStore } from "./project";
 import { editorRenamed, openInEditor } from "./editor";
@@ -89,6 +89,43 @@ export async function confirmDelete() {
   }
 }
 
+/** Área de transferência interna da árvore (Ctrl+C / Ctrl+V). */
+let clipboard: { path: string; isDir: boolean } | null = null;
+
+const parentDir = (p: string) => p.slice(0, Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")));
+
+export function copyEntry(entry: { path: string; isDir: boolean }) {
+  clipboard = entry;
+  toast(`${baseName(entry.path)} copiado`);
+}
+
+/** Cola o item copiado em `destDir`. */
+export async function pasteInto(destDir: string) {
+  if (!clipboard) return toast("Nada copiado na árvore");
+  try {
+    const created = await fsCopy(clipboard.path, destDir);
+    ensureExpanded(destDir);
+    projectStore.set({ revealed: created });
+    refreshTree();
+  } catch (e) {
+    toast(`Não foi possível colar: ${e}`, "error");
+  }
+}
+
+/** Move `path` (arrastado) para a pasta `destDir`. */
+export async function moveInto(path: string, destDir: string) {
+  if (pathKey(parentDir(path)) === pathKey(destDir)) return;
+  try {
+    const next = await fsMove(path, destDir);
+    editorRenamed(path, next);
+    ensureExpanded(destDir);
+    projectStore.set({ revealed: next });
+    refreshTree();
+  } catch (e) {
+    toast(`Não foi possível mover: ${e}`, "error");
+  }
+}
+
 function copy(text: string, what: string) {
   void navigator.clipboard.writeText(text).then(
     () => toast(`${what} copiado`),
@@ -129,6 +166,9 @@ export function menuFor(entry: { path: string; isDir: boolean } | null, onOpenFi
   items.push({ label: "Novo arquivo…", run: () => startCreate("newFile", dir) });
   items.push({ label: "Nova pasta…", run: () => startCreate("newFolder", dir) });
   items.push("separator");
+  if (entry) items.push({ label: "Copiar", hint: "Ctrl+C", run: () => copyEntry(entry) });
+  items.push({ label: "Colar", hint: "Ctrl+V", disabled: !clipboard, run: () => void pasteInto(dir) });
+  items.push("separator");
   items.push({ label: "Revelar no Explorador de Arquivos", hint: "Shift+Alt+R", run: () => void revealInOs(path).catch((e) => toast(String(e), "error")) });
   items.push({ label: "Abrir no terminal integrado", run: () => openTerminalIn(dir) });
   items.push("separator");
@@ -148,7 +188,9 @@ export function menuFor(entry: { path: string; isDir: boolean } | null, onOpenFi
 /** Atalhos com o foco num item da árvore (como no VS Code). */
 export function treeItemKey(e: React.KeyboardEvent, entry: { path: string; isDir: boolean }) {
   const k = e.key;
-  if (k === "F2") startRename(entry.path, entry.isDir);
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyC") copyEntry(entry);
+  else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyV") void pasteInto(entry.isDir ? entry.path : parentDir(entry.path));
+  else if (k === "F2") startRename(entry.path, entry.isDir);
   else if (k === "Delete") requestDelete(entry.path, entry.isDir);
   else if (e.shiftKey && e.altKey && e.code === "KeyR") void revealInOs(entry.path);
   else if (e.shiftKey && e.altKey && e.code === "KeyC") copy(entry.path, "Caminho");

@@ -6,7 +6,7 @@ import { baseName, pathKey, toRel } from "../lib/paths";
 import { projectStore, toggleExpanded } from "../state/project";
 import { settingsStore } from "../state/settings";
 import { activityStore, isActive } from "../state/activity";
-import { cancelEdit, commitEdit, confirmDelete, explorerStore, menuFor, treeItemKey } from "../state/explorer";
+import { cancelEdit, commitEdit, confirmDelete, explorerStore, menuFor, moveInto, treeItemKey } from "../state/explorer";
 import { gitStore } from "../state/git";
 import type { GitChange } from "../lib/ipc";
 
@@ -69,12 +69,74 @@ function treeArrowKey(e: React.KeyboardEvent<HTMLDivElement>, entry: DirEntry, o
   return false;
 }
 
+let suppressClick = false;
+
+/** Pasta de destino sob o ponteiro: a pasta do item (ou a pasta que o contém) ou a raiz. */
+function dropTarget(x: number, y: number): { el: HTMLElement; dir: string } | null {
+  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>(".tree-item[data-path], .file-tree");
+  if (!el) return null;
+  if (el.classList.contains("file-tree")) return { el, dir: el.dataset.root! };
+  const path = el.dataset.path!;
+  if (el.dataset.dir === "1") return { el, dir: path };
+  const parent = path.slice(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")));
+  return { el, dir: parent };
+}
+
+/** Arrastar por eventos de ponteiro (o drag nativo do HTML é interceptado pelo Tauri). */
+function beginTreeDrag(e: React.PointerEvent, entry: DirEntry) {
+  if (e.button !== 0 || (e.target as HTMLElement).closest("input")) return;
+  const sx = e.clientX;
+  const sy = e.clientY;
+  let active = false;
+  let marked: HTMLElement | null = null;
+  const mark = (el: HTMLElement | null) => {
+    if (marked === el) return;
+    marked?.classList.remove("drop-target");
+    el?.classList.add("drop-target");
+    marked = el;
+  };
+  const move = (ev: PointerEvent) => {
+    if (!active) {
+      if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return;
+      active = true;
+      document.body.classList.add("dragging-file");
+    }
+    const t = dropTarget(ev.clientX, ev.clientY);
+    // Só destaca pastas (ou a raiz); soltar sobre um arquivo vai para a pasta dele.
+    mark(t && pathKey(t.dir) !== pathKey(entry.path) && t.el.dataset.dir !== "0" ? t.el : null);
+  };
+  const finish = (cancel: boolean, ev?: PointerEvent) => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("keydown", key, true);
+    if (!active) return;
+    document.body.classList.remove("dragging-file");
+    mark(null);
+    suppressClick = true;
+    setTimeout(() => (suppressClick = false), 0);
+    if (cancel || !ev) return;
+    const t = dropTarget(ev.clientX, ev.clientY);
+    if (t) void moveInto(entry.path, t.dir);
+  };
+  const up = (ev: PointerEvent) => finish(false, ev);
+  const key = (ev: KeyboardEvent) => {
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      finish(true);
+    }
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("keydown", key, true);
+}
+
 /** Árvore do sistema de arquivos real (independente do grafo). */
 export function FileTree({ onOpenFile }: { onOpenFile: (absPath: string) => void }) {
   const root = projectStore.use((s) => s.root);
   if (!root) return null;
   return (
-    <div className="file-tree" role="tree" aria-label="Arquivos do projeto" onContextMenu={(e) => openContextMenu(e, menuFor(null, onOpenFile))}>
+    <div className="file-tree" data-root={root} role="tree" aria-label="Arquivos do projeto" onContextMenu={(e) => openContextMenu(e, menuFor(null, onOpenFile))}>
       <DirChildren path={root} depth={0} onOpenFile={onOpenFile} />
     </div>
   );
@@ -196,12 +258,15 @@ function TreeItem({ entry, depth, onOpenFile }: { entry: DirEntry; depth: number
         aria-expanded={entry.isDir ? open : undefined}
         aria-selected={revealed}
         data-depth={depth}
+        data-path={entry.path}
+        data-dir={entry.isDir ? "1" : "0"}
+        onPointerDown={(e) => !renaming && beginTreeDrag(e, entry)}
         className={`tree-item ${entry.isDir ? "dir" : "file"} ${revealed ? "revealed" : ""} ${renaming ? "editing" : ""} ${
           isRepo && isModified ? `git-${change?.status ?? "dir"}` : ""
         }`}
         style={{ paddingLeft: depth * 14 + 10 }}
         title={entry.path}
-        onClick={() => !renaming && (entry.isDir ? toggleExpanded(entry.path) : onOpenFile(entry.path))}
+        onClick={() => !renaming && !suppressClick && (entry.isDir ? toggleExpanded(entry.path) : onOpenFile(entry.path))}
         onKeyDown={(e) => {
           if (renaming) return;
           if (e.key === "Enter") entry.isDir ? toggleExpanded(entry.path) : onOpenFile(entry.path);

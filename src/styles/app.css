@@ -1873,6 +1873,17 @@ body.resizing .splitter::after {
   background: var(--fill-1);
   color: var(--text);
 }
+body.dragging-file,
+body.dragging-file * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+.tree-item.drop-target,
+.file-tree.drop-target {
+  background: var(--fill-2);
+  outline: 1px solid var(--text-2);
+  outline-offset: -1px;
+}
 .tree-item.revealed {
   background: var(--fill-2);
   color: var(--text);

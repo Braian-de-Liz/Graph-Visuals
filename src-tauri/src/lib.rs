@@ -33,6 +33,8 @@ pub fn run() {
             fs_ops::fs_index,
             fs_edit::fs_create,
             fs_edit::fs_rename,
+            fs_edit::fs_move,
+            fs_edit::fs_copy,
             fs_edit::fs_delete,
             fs_edit::fs_format,
             fs_edit::reveal_in_os,

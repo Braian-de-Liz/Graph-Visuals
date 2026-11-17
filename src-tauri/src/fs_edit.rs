@@ -93,6 +93,83 @@ pub fn fs_rename(project: State<'_, ProjectState>, path: String, new_name: Strin
     Ok(path_to_string(&target))
 }
 
+/// Resolve `source` e a pasta de destino, garantindo que a pasta não seja o
+/// próprio item nem um descendente dele.
+fn resolve_pair(project: &ProjectState, path: &str, dest_dir: &str) -> Result<(PathBuf, PathBuf), String> {
+    let source = project.resolve_inside(path)?;
+    if source == project.root()? {
+        return Err("não é possível mover ou copiar a raiz do projeto".into());
+    }
+    let dest = project.resolve_inside(dest_dir)?;
+    if !dest.is_dir() {
+        return Err("o destino não é uma pasta".into());
+    }
+    if source.is_dir() && dest.starts_with(&source) {
+        return Err("não é possível colocar uma pasta dentro dela mesma".into());
+    }
+    Ok((source, dest))
+}
+
+/// Move um arquivo ou pasta para `dest_dir`. Retorna o novo caminho.
+#[tauri::command]
+pub fn fs_move(project: State<'_, ProjectState>, path: String, dest_dir: String) -> Result<String, String> {
+    let (source, dest) = resolve_pair(&project, &path, &dest_dir)?;
+    let name = source.file_name().ok_or("caminho sem nome")?;
+    let target = dest.join(name);
+    if target == source {
+        return Ok(path_to_string(&source));
+    }
+    if target.exists() {
+        return Err(format!("já existe em {}: {}", dest.display(), name.to_string_lossy()));
+    }
+    if std::fs::rename(&source, &target).is_err() {
+        // rename falha entre volumes diferentes: copia e remove a origem.
+        copy_recursive(&source, &target)?;
+        if source.is_dir() { std::fs::remove_dir_all(&source) } else { std::fs::remove_file(&source) }
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(path_to_string(&target))
+}
+
+/// Copia um arquivo ou pasta para `dest_dir`; se o nome já existir, usa
+/// "nome copia", "nome copia 2"… Retorna o novo caminho.
+#[tauri::command]
+pub fn fs_copy(project: State<'_, ProjectState>, path: String, dest_dir: String) -> Result<String, String> {
+    let (source, dest) = resolve_pair(&project, &path, &dest_dir)?;
+    let name = source.file_name().ok_or("caminho sem nome")?.to_string_lossy().to_string();
+    let mut target = dest.join(&name);
+    if target.exists() {
+        let (stem, ext) = match name.rfind('.') {
+            Some(i) if i > 0 && source.is_file() => (&name[..i], &name[i..]),
+            _ => (name.as_str(), ""),
+        };
+        let mut n = 1;
+        loop {
+            let suffix = if n == 1 { " copia".to_string() } else { format!(" copia {n}") };
+            target = dest.join(format!("{stem}{suffix}{ext}"));
+            if !target.exists() {
+                break;
+            }
+            n += 1;
+        }
+    }
+    copy_recursive(&source, &target)?;
+    Ok(path_to_string(&target))
+}
+
+fn copy_recursive(from: &Path, to: &Path) -> Result<(), String> {
+    if from.is_dir() {
+        std::fs::create_dir_all(to).map_err(|e| e.to_string())?;
+        for entry in std::fs::read_dir(from).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            copy_recursive(&entry.path(), &to.join(entry.file_name()))?;
+        }
+    } else {
+        std::fs::copy(from, to).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Move um arquivo ou pasta para a Lixeira (recuperável), como o VS Code.
 #[tauri::command]
 pub fn fs_delete(project: State<'_, ProjectState>, path: String) -> Result<(), String> {
