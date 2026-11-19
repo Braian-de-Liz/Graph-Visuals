@@ -119,8 +119,11 @@ function toggleLeftColumn() {
   const ui = uiStore.get();
   const { leftTopId, leftBottomId } = sessionsStore.get();
   const visible = !ui.columnHidden && (ui.left === "expanded" || !!leftTopId || !!leftBottomId);
-  if (visible) uiStore.set({ columnHidden: true, left: "rail" });
-  else uiStore.set({ columnHidden: false, left: "expanded" });
+  // Esconder/mostrar só mexe em columnHidden: o modo (`left`) e o maximizado ficam como estavam,
+  // senão ao reabrir surgiria um painel de seleção de agente abaixo da sessão já encaixada.
+  if (visible) uiStore.set({ columnHidden: true });
+  else if (ui.columnHidden) uiStore.set({ columnHidden: false });
+  else uiStore.set({ left: "expanded" });
 }
 
 // ---------- tabela ----------
