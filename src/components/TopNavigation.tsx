@@ -59,7 +59,7 @@ export function TopNavigation() {
             Graph <b>Visuals</b>
           </span>
         </div>
-        <span className="topnav-sep" />
+        <span className="topnav-sep" data-tauri-drag-region />
         <button
           className="project-btn"
           aria-haspopup="menu"
@@ -72,9 +72,9 @@ export function TopNavigation() {
         {root && (
           <>
             <BranchPicker />
-            <span className="topnav-sep" />
+            <span className="topnav-sep" data-tauri-drag-region />
             <GraphStatusPill />
-            {nodes > 0 && <span className="topnav-figure">{nodes.toLocaleString("pt-BR")} nodes</span>}
+            {nodes > 0 && <span className="topnav-figure" data-tauri-drag-region>{nodes.toLocaleString("pt-BR")} nodes</span>}
           </>
         )}
       </div>
@@ -88,7 +88,7 @@ export function TopNavigation() {
         </button>
       </div>
 
-      <div className="topnav-actions">
+      <div className="topnav-actions" data-tauri-drag-region>
         <button
           className={`icon-btn ${left !== "hidden" ? "on" : ""}`}
           title="Agentes (Ctrl+B)"
@@ -107,7 +107,7 @@ export function TopNavigation() {
         <button className="icon-btn" title="Configurações (Ctrl+,)" onClick={() => uiStore.set({ settingsOpen: true })}>
           <Icon name="settings" />
         </button>
-        <span className="topnav-sep" />
+        <span className="topnav-sep" data-tauri-drag-region />
         <div className="window-controls">
           <button title="Minimizar" onClick={() => void win.minimize()}>
             <Icon name="minimize" size={14} />
