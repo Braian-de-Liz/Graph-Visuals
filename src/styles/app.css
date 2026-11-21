@@ -2572,11 +2572,102 @@ body.dragging-session * {
   flex: 1 1 0;
   min-width: 0;
 }
-.editor-main.mdv-preview > .editor-host {
+.editor-main.mdv-preview > .editor-host,
+.editor-main.mdv-image > .editor-host {
   display: none;
 }
-.editor-main.mdv-split > .md-preview {
+.editor-main.mdv-split > .md-preview,
+.editor-main.mdv-split > .img-preview {
   border-left: 1px solid var(--line);
+}
+.img-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background-color: #0b0b0d;
+  background-image:
+    linear-gradient(45deg, #131316 25%, transparent 25%, transparent 75%, #131316 75%),
+    linear-gradient(45deg, #131316 25%, transparent 25%, transparent 75%, #131316 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+.img-preview img {
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+.img-preview.actual img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+.img-preview .img-info {
+  position: sticky;
+  left: 0;
+  bottom: 0;
+  margin-top: auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  background: rgba(5, 5, 6, 0.8);
+}
+.pdf-preview {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b0d;
+}
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.pdf-bar .spacer {
+  flex: 1;
+}
+.pdf-bar .pdf-zoom {
+  min-width: 52px;
+  text-align: center;
+}
+.pdf-bar .btn.on {
+  color: var(--text);
+}
+.pdf-pages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 32px;
+}
+.pdf-page {
+  flex: none;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+.pdf-page canvas {
+  display: block;
+}
+.pdf-preview .img-empty {
+  margin: auto;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.img-preview .img-empty {
+  margin: auto;
+  color: var(--text-3);
+  font-size: 12.5px;
 }
 .md-switch {
   display: inline-flex;

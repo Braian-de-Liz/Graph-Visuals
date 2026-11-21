@@ -61,22 +61,25 @@ export function resolveFrom(mdPath: string, rel: string): string {
   return parts.join(sep);
 }
 
+export const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
 const cache = new Map<string, string>();
 
 /**
  * Converte uma imagem local do projeto em data URI (a CSP da janela não
  * permite ler arquivos do disco diretamente). SVG é lido como texto; os
- * demais formatos usam o comando `fs_read_bytes` (base64).
+ * demais formatos usam o comando `fs_read_bytes` (base64). `fresh` ignora o
+ * cache (o arquivo pode ter mudado no disco).
  */
-export async function localImage(absPath: string): Promise<string | null> {
-  const hit = cache.get(absPath);
+export async function localImage(absPath: string, fresh = false): Promise<string | null> {
+  const hit = fresh ? undefined : cache.get(absPath);
   if (hit) return hit;
   const ext = absPath.toLowerCase().split(".").pop() ?? "";
   let url: string | null = null;
   try {
     if (ext === "svg") {
       const f = await fsReadText(absPath);
-      url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(f.content)}`;
+      url = svgDataUrl(f.content);
     } else if (MIME[ext]) {
       const b64 = await invoke<string>("fs_read_bytes", { path: absPath });
       url = `data:${MIME[ext]};base64,${b64}`;

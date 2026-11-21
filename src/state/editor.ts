@@ -42,18 +42,26 @@ export const editorStore = createStore<EditorState>({
 });
 
 export const isMarkdown = (path: string | null) => !!path && /\.(md|markdown|mdx)$/i.test(path);
+export const isSvg = (path: string | null) => !!path && /\.svg$/i.test(path);
+/** Imagens raster: abertas só para visualização (não há texto para editar). */
+export const isRasterImage = (path: string | null) => !!path && /\.(png|jpe?g|gif|webp|bmp|ico|avif)$/i.test(path);
+export const isPdf = (path: string | null) => !!path && /\.pdf$/i.test(path);
+/** Arquivos binários abertos só para visualização (imagem raster e PDF). */
+export const isBinaryPreview = (path: string | null) => isRasterImage(path) || isPdf(path);
+/** Arquivos de texto com prévia ao lado do código (Markdown e SVG). */
+export const hasPreview = (path: string | null) => isMarkdown(path) || isSvg(path);
 
 /** Ctrl+Shift+V: alterna entre o código e a prévia (como no VS Code). */
 export function toggleMarkdownPreview() {
   const s = editorStore.get();
-  if (!isMarkdown(s.openPath)) return;
+  if (!hasPreview(s.openPath)) return;
   editorStore.set({ mdView: s.mdView === "preview" ? "code" : "preview", visible: true });
 }
 
 /** Ctrl+K V: abre a prévia ao lado do código. */
 export function toggleMarkdownSide() {
   const s = editorStore.get();
-  if (!isMarkdown(s.openPath)) return;
+  if (!hasPreview(s.openPath)) return;
   editorStore.set({ mdView: s.mdView === "split" ? "code" : "split", visible: true });
 }
 

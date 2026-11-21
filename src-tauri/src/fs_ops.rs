@@ -85,12 +85,14 @@ pub fn fs_read_text(project: State<'_, ProjectState>, path: String) -> Result<Te
     }
 }
 
-/// Imagens maiores que isso não são carregadas no preview de Markdown.
+/// Imagens maiores que isso não são carregadas no preview.
 const MAX_IMAGE_BYTES: u64 = 10 * 1024 * 1024;
-/// Formatos aceitos por `fs_read_bytes` (apenas imagens do preview).
-const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"];
+/// PDFs costumam ser maiores que imagens.
+const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
+/// Formatos aceitos por `fs_read_bytes` (apenas arquivos de preview).
+const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif", "pdf"];
 
-/// Lê uma imagem do projeto e devolve o conteúdo em base64 (para data URI).
+/// Lê uma imagem ou PDF do projeto e devolve o conteúdo em base64.
 #[tauri::command]
 pub fn fs_read_bytes(project: State<'_, ProjectState>, path: String) -> Result<String, String> {
     let file = project.resolve_inside(&path)?;
@@ -105,8 +107,9 @@ pub fn fs_read_bytes(project: State<'_, ProjectState>, path: String) -> Result<S
     if meta.is_dir() {
         return Err("é um diretório".into());
     }
-    if meta.len() > MAX_IMAGE_BYTES {
-        return Err(format!("imagem grande demais ({} bytes)", meta.len()));
+    let (max, what) = if ext == "pdf" { (MAX_PDF_BYTES, "PDF") } else { (MAX_IMAGE_BYTES, "imagem") };
+    if meta.len() > max {
+        return Err(format!("{what} grande demais ({} bytes)", meta.len()));
     }
     let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
     Ok(base64_encode(&bytes))

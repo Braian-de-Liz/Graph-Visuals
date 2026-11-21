@@ -18,7 +18,11 @@ import { fsFormat, fsReadText, fsStatMtime, fsWriteText, onFsChanged } from "../
 import { baseName, pathKey, toRel } from "../lib/paths";
 import {
   editorStore,
+  hasPreview,
   isMarkdown,
+  isBinaryPreview,
+  isPdf,
+  isSvg,
   openInEditor,
   registerEditorHandlers,
   resolveDirtyTabs,
@@ -27,6 +31,8 @@ import {
   type MarkdownView,
 } from "../state/editor";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { ImagePreview } from "./ImagePreview";
+import { PdfPreview } from "./PdfPreview";
 import { projectStore } from "../state/project";
 import { toast } from "../state/ui";
 import { ask, askAboutDirty } from "../state/dialog";
@@ -71,10 +77,14 @@ export function FloatingCodeEditor() {
   const tabs = editorStore.use((s) => s.tabs);
   const mdView = editorStore.use((s) => s.mdView);
   const isMd = isMarkdown(openPath);
-  // Texto do Markdown aberto, para a prévia (atualizado a cada edição).
+  const isImage = isBinaryPreview(openPath);
+  const canPreview = hasPreview(openPath);
+  // Incrementado a cada leitura do disco: força a imagem a ser recarregada.
+  const [imgVersion, setImgVersion] = useState(0);
+  // Texto do Markdown/SVG aberto, para a prévia (atualizado a cada edição).
   const [mdSource, setMdSource] = useState("");
   const isMdRef = useRef(false);
-  isMdRef.current = isMd;
+  isMdRef.current = canPreview;
   const token = editorStore.use((s) => s.requestToken);
   const root = projectStore.use((s) => s.root);
 
@@ -197,8 +207,10 @@ export function FloatingCodeEditor() {
     if (!view) return;
     setLoading(true);
     try {
-      const file = await fsReadText(path);
-      const lang = await languageFor(path);
+      // Imagem raster e PDF não são texto: só confere o mtime e mostra a prévia.
+      const raster = isBinaryPreview(path);
+      const file = raster ? { content: "", lossy: true, mtime: await fsStatMtime(path) } : await fsReadText(path);
+      const lang = raster ? null : await languageFor(path);
       if (!keepView && pathRef.current && !sameKey(pathRef.current, path)) stashCurrent();
       const prevSel = keepView ? view.state.selection.main.head : 0;
       const prevScroll = keepView ? view.scrollDOM.scrollTop : 0;
@@ -216,12 +228,13 @@ export function FloatingCodeEditor() {
       stashRef.current.delete(pathKey(path));
       setReadOnly(file.lossy);
       setBanner(null);
+      setImgVersion((v) => v + 1);
       editorStore.set((s) => ({
         openPath: path,
         dirty: false,
         tabs: s.tabs.some((t) => sameKey(t.path, path)) ? s.tabs : [...s.tabs, { path, dirty: false }],
       }));
-      setMdSource(isMarkdown(path) ? file.content : "");
+      setMdSource(hasPreview(path) ? file.content : "");
       if (keepView) {
         const pos = Math.min(prevSel, view.state.doc.length);
         view.dispatch({ selection: { anchor: pos } });
@@ -257,7 +270,7 @@ export function FloatingCodeEditor() {
     setBanner(null);
     const tabDirty = editorStore.get().tabs.find((t) => sameKey(t.path, path))?.dirty ?? false;
     editorStore.set({ openPath: path, dirty: tabDirty });
-    setMdSource(isMarkdown(path) ? st.state.doc.toString() : "");
+    setMdSource(hasPreview(path) ? st.state.doc.toString() : "");
     updateCursor(st.state);
     if (line) goToLine(line);
     else {
@@ -603,9 +616,9 @@ export function FloatingCodeEditor() {
           <span title={openPath ?? ""}>{rel}</span>
         </div>
         <span className="spacer" />
-        {readOnly && <span className="badge red">somente leitura · não UTF-8</span>}
+        {readOnly && !isImage && <span className="badge red">somente leitura · não UTF-8</span>}
         {loading && <span className="badge">carregando…</span>}
-        {isMd && <MarkdownViewSwitch value={mdView} onChange={(v) => editorStore.set({ mdView: v })} />}
+        {canPreview && <MarkdownViewSwitch value={mdView} onChange={(v) => editorStore.set({ mdView: v })} />}
         <EditorToolbar
           mode={mode}
           dirty={dirty}
@@ -670,13 +683,19 @@ export function FloatingCodeEditor() {
         </div>
       )}
 
-      <div className={`editor-main mdv-${isMd ? mdView : "code"}`}>
+      <div className={`editor-main mdv-${isImage ? "image" : canPreview ? mdView : "code"}`}>
         <div className="editor-host" ref={hostRef} />
         {isMd && mdView !== "code" && openPath && <MarkdownPreview source={mdSource} path={openPath} />}
+        {isSvg(openPath) && mdView !== "code" && <ImagePreview svg={mdSource} />}
+        {isImage && openPath && !isPdf(openPath) && <ImagePreview path={openPath} version={imgVersion} />}
+        {isPdf(openPath) && openPath && <PdfPreview path={openPath} version={imgVersion} />}
       </div>
       <footer className="editor-status">
-        <span>Ln {cursor.line}, Col {cursor.col}</span>
-        <span>Ctrl+S salvar · Ctrl+F buscar{tabs.length > 1 ? " · Ctrl+Tab trocar aba" : ""}</span>
+        <span>{isPdf(openPath) ? "PDF" : isImage ? "Imagem" : `Ln ${cursor.line}, Col ${cursor.col}`}</span>
+        <span>
+          {isPdf(openPath) ? "Role para navegar entre as páginas" : isImage ? "Clique na imagem para alternar entre ajustar e tamanho real" : "Ctrl+S salvar · Ctrl+F buscar"}
+          {tabs.length > 1 ? " · Ctrl+Tab trocar aba" : ""}
+        </span>
       </footer>
     </div>
   );
