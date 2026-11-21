@@ -1,7 +1,7 @@
 // Configuração do CodeMirror 6: tema Graph Visuals e carregamento de linguagens
 // sob demanda (cada pacote de linguagem vira um chunk separado).
 import { EditorView } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting, type LanguageSupport } from "@codemirror/language";
+import { HighlightStyle, LanguageSupport, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import type { Extension } from "@codemirror/state";
 
@@ -35,20 +35,44 @@ export const gvTheme = EditorView.theme(
   { dark: true },
 );
 
+// Paleta de sintaxe (sobre o fundo #050506).
+const c = {
+  decl: "#7FB2EC", // declarações: const, fn, class, import
+  flow: "#B49CE8", // fluxo de controle: if, return, for
+  string: "#CDB884",
+  escape: "#E3A27C", // escapes e números
+  constant: "#F0A0A0", // constantes e this
+  fn: "#39BFFF", // chamada de função
+  fnDef: "#6FD0FF", // definição de função
+  type: "#7DD3B0", // tipos, classes, namespaces
+  prop: "#9CC2E8", // propriedades e chaves de JSON
+  tag: "#E58F9E", // tags HTML
+  meta: "#D5B66A", // decoradores, macros, títulos
+  variable: "#D7DCE4",
+  special: "#8FD0E8", // $variáveis do PowerShell
+  punct: "#8A919B",
+  comment: "#5D6673",
+};
+
 const highlight = HighlightStyle.define([
-  { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#7FB2EC" },
-  { tag: [t.string, t.special(t.string), t.regexp], color: "#CDB884" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "#E3A27C" },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: "#5D6673", fontStyle: "italic" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#39BFFF" },
-  { tag: [t.typeName, t.className, t.namespace], color: "#9AD7EA" },
-  { tag: [t.definition(t.variableName)], color: "#E6EAF0" },
-  { tag: [t.propertyName, t.attributeName], color: "#C3CBD6" },
-  { tag: [t.tagName], color: "#39BFFF" },
-  { tag: [t.operator, t.punctuation, t.bracket], color: "#8A919B" },
-  { tag: [t.heading], color: "#D5B66A", fontWeight: "600" },
-  { tag: [t.link, t.url], color: "#39BFFF", textDecoration: "underline" },
-  { tag: [t.meta, t.annotation], color: "#B6A16E" },
+  { tag: [t.keyword, t.modifier, t.definitionKeyword, t.moduleKeyword], color: c.decl },
+  { tag: [t.controlKeyword, t.operatorKeyword], color: c.flow },
+  { tag: [t.string, t.regexp], color: c.string },
+  { tag: [t.escape, t.special(t.string)], color: c.escape },
+  { tag: [t.number, t.bool, t.null, t.atom], color: c.escape },
+  { tag: [t.constant(t.variableName), t.self], color: c.constant },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: c.comment, fontStyle: "italic" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName), t.standard(t.variableName), t.standard(t.name)], color: c.fn },
+  { tag: [t.definition(t.function(t.variableName)), t.definition(t.function(t.propertyName))], color: c.fnDef },
+  { tag: [t.typeName, t.className, t.namespace], color: c.type },
+  { tag: [t.variableName, t.definition(t.variableName)], color: c.variable },
+  { tag: t.special(t.variableName), color: c.special },
+  { tag: [t.propertyName, t.attributeName, t.definition(t.propertyName)], color: c.prop },
+  { tag: [t.tagName], color: c.tag },
+  { tag: [t.operator, t.punctuation, t.bracket], color: c.punct },
+  { tag: [t.heading], color: c.meta, fontWeight: "600" },
+  { tag: [t.link, t.url], color: c.fn, textDecoration: "underline" },
+  { tag: [t.meta, t.annotation], color: c.meta },
   { tag: t.invalid, color: "#E0566A" },
 ]);
 
@@ -85,6 +109,18 @@ export async function languageFor(path: string): Promise<LanguageSupport | null>
     case "vue":
     case "svelte":
       return (await import("@codemirror/lang-html")).html();
+    case "sql":
+      return (await import("@codemirror/lang-sql")).sql();
+    case "ps1":
+    case "psm1":
+    case "psd1": {
+      // PowerShell só existe como modo legado; as tags mapeadas usam a mesma paleta.
+      const [{ StreamLanguage }, { powerShell }] = await Promise.all([
+        import("@codemirror/language"),
+        import("@codemirror/legacy-modes/mode/powershell"),
+      ]);
+      return new LanguageSupport(StreamLanguage.define(powerShell));
+    }
     case "md":
     case "markdown":
       return (await import("@codemirror/lang-markdown")).markdown();

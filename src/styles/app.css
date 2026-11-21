@@ -1977,6 +1977,43 @@ body.dragging-file * {
     opacity var(--t) var(--ease),
     scale var(--t) var(--ease);
 }
+.code-editor.resizing {
+  transition: none;
+  user-select: none;
+}
+.editor-resize {
+  position: absolute;
+  z-index: 5;
+}
+.editor-resize.rz-n,
+.editor-resize.rz-s {
+  left: 10px;
+  right: 10px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.editor-resize.rz-e,
+.editor-resize.rz-w {
+  top: 10px;
+  bottom: 10px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.editor-resize.rz-n { top: 0; }
+.editor-resize.rz-s { bottom: 0; }
+.editor-resize.rz-e { right: 0; }
+.editor-resize.rz-w { left: 0; }
+.editor-resize.rz-ne,
+.editor-resize.rz-nw,
+.editor-resize.rz-se,
+.editor-resize.rz-sw {
+  width: 12px;
+  height: 12px;
+}
+.editor-resize.rz-ne { top: 0; right: 0; cursor: nesw-resize; }
+.editor-resize.rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.editor-resize.rz-nw { top: 0; left: 0; cursor: nwse-resize; }
+.editor-resize.rz-se { bottom: 0; right: 0; cursor: nwse-resize; }
 .code-editor.hidden {
   opacity: 0;
   scale: 0.98;

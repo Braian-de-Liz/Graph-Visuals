@@ -116,6 +116,10 @@ export function FloatingCodeEditor() {
   const [readOnly, setReadOnlyState] = useState(false);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  // Tamanho definido com o mouse; null = tamanho do modo atual (compacto/expandido).
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [resizing, setResizing] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
 
   const setReadOnly = (v: boolean) => {
@@ -577,7 +581,52 @@ export function FloatingCodeEditor() {
 
   const setMode = (m: EditorMode) => {
     editorStore.set({ mode: m });
+    setSize(null); // trocar de modo volta ao tamanho predefinido
     if (m === "maximized") setOffset({ x: 0, y: 0 });
+  };
+
+  // --- redimensionar pelas bordas e cantos ---
+  const MIN_W = 320;
+  const MIN_H = 200;
+  const startResize = (dir: string) => (e: React.PointerEvent) => {
+    const el = rootRef.current;
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    const parent = el.offsetParent?.getBoundingClientRect();
+    const maxW = parent ? parent.width : Infinity;
+    const maxH = parent ? parent.height : Infinity;
+    const from = { x: e.clientX, y: e.clientY, w: r.width, h: r.height, ox: offset.x, oy: offset.y };
+    setResizing(true);
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - from.x;
+      const dy = ev.clientY - from.y;
+      let w = from.w;
+      let h = from.h;
+      let ox = from.ox;
+      let oy = from.oy;
+      if (dir.includes("e")) w = Math.min(Math.max(from.w + dx, MIN_W), maxW);
+      if (dir.includes("s")) h = Math.min(Math.max(from.h + dy, MIN_H), maxH);
+      // Pelo lado esquerdo/topo, a borda oposta fica parada: desloca a janela.
+      if (dir.includes("w")) {
+        w = Math.min(Math.max(from.w - dx, MIN_W), maxW);
+        ox = from.ox + (from.w - w);
+      }
+      if (dir.includes("n")) {
+        h = Math.min(Math.max(from.h - dy, MIN_H), maxH);
+        oy = from.oy + (from.h - h);
+      }
+      setSize({ w, h });
+      setOffset({ x: ox, y: oy });
+    };
+    const up = () => {
+      setResizing(false);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
   };
 
   // --- arrastar pela barra de título ---
@@ -602,10 +651,21 @@ export function FloatingCodeEditor() {
   };
 
   const rel = openPath && root ? toRel(root, openPath) : openPath;
-  const style = mode === "maximized" ? undefined : { transform: `translate(${offset.x}px, ${offset.y}px)` };
+  const style =
+    mode === "maximized"
+      ? undefined
+      : { transform: `translate(${offset.x}px, ${offset.y}px)`, ...(size && { width: size.w, height: size.h }) };
 
   return (
-    <div className={`code-editor glass-strong mode-${mode} ${visible ? "shown" : "hidden"}`} style={style}>
+    <div
+      ref={rootRef}
+      className={`code-editor glass-strong mode-${mode} ${visible ? "shown" : "hidden"} ${resizing ? "resizing" : ""}`}
+      style={style}
+    >
+      {mode !== "maximized" &&
+        ["n", "s", "e", "w", "ne", "nw", "se", "sw"].map((d) => (
+          <div key={d} className={`editor-resize rz-${d}`} onPointerDown={startResize(d)} />
+        ))}
       <header className="editor-titlebar" onPointerDown={startDrag} onDoubleClick={() => setMode(mode === "maximized" ? "expanded" : "maximized")}>
         <Icon name="code" className="arc" />
         <div className="editor-file">
