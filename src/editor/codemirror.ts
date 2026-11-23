@@ -111,6 +111,12 @@ export async function languageFor(path: string): Promise<LanguageSupport | null>
       return (await import("@codemirror/lang-html")).html();
     case "sql":
       return (await import("@codemirror/lang-sql")).sql();
+    case "php":
+    case "phtml":
+    case "php5":
+    case "inc":
+      // PHP puro ou misturado com HTML; cores e autocomplete (palavras-chave, funções) vêm do pacote.
+      return (await import("@codemirror/lang-php")).php();
     case "ps1":
     case "psm1":
     case "psd1": {
